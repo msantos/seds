@@ -90,11 +90,19 @@ init(Port, Opt) ->
 
 handle_call({send, {IP, Port, #dns_rec{} = Rec,
             #seds{type = Type, sum = Sum, data = Data} = Query}},
-            _From, State) ->
+            _From, #state{p = Proxies} = State) ->
     Session = seds_protocol:session(Query, map(State)),
-    {Proxy, Proxies} = proxy(Session, State),
-    ok = seds_proxy:send(Proxy, IP, Port, Rec, {Type, Sum, Data}),
-    {reply, ok, State#state{p = Proxies}};
+    case dict:find(Session, Proxies) of
+        error when Sum == 0 ->
+            {Proxy, Proxies1} = proxy(Session, State),
+            ok = seds_proxy:send(Proxy, IP, Port, Rec, {Type, 0, Data}),
+            {reply, ok, State#state{p = Proxies1}};
+        error ->
+            {reply, ok, State};
+        {ok, Proxy} ->
+            ok = seds_proxy:send(Proxy, IP, Port, Rec, {Type, Sum, Data}),
+            {reply, ok, State}
+    end;
 
 handle_call(Request, _From, State) ->
     error_logger:error_report([{wtf, Request}]),
@@ -141,17 +149,13 @@ proxy({{IP, Port}, Id} = Session, #state{
         s = Socket,
         p = Proxies
     }) ->
-    case dict:find(Session, Proxies) of
-        error ->
-            error_logger:info_report([
-                    {session_start, {IP, Port}},
-                    {id, Id}
-                ]),
-            {ok, Pid} = seds_proxy:start_link(Socket, {IP, Port}),
-            {Pid, dict:store(Session, Pid, Proxies)};
-        {ok, Pid} ->
-            {Pid, Proxies}
-    end.
+    error_logger:info_report([
+        {session_start, {IP, Port}},
+        {id, Id}
+    ]),
+    {ok, Pid} = seds_proxy:start_link(Socket, {IP, Port}),
+    {Pid, dict:store(Session, Pid, Proxies)}.
+
 
 config(Key, Cfg) ->
     config(Key, Cfg, undefined).
