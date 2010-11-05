@@ -198,8 +198,7 @@ proxy({down, IP, Port,
         duplicate ->
             error_logger:info_report([{resending, {IP, Port, Sum}}]),
             ok = resend(DNSSocket, IP, Port, Type, Buf, Rec),
-            {next_state, proxy, State#state{sum_down = Sum},
-                ?PROXY_TIMEOUT};
+            {next_state, proxy, State, ?PROXY_TIMEOUT};
         Packet ->
 %            error_logger:info_report([
 %                {direction, down},
