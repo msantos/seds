@@ -82,7 +82,7 @@ init(Port, Opt) ->
             acl = config(acl, ?CFG, []),
             acl_port = config(allowed_ports, ?CFG, [22]),
             f = config(forward, ?CFG, []),
-            d = [ string:tokens(N, ".") || N <- config(domains, ?CFG) ],
+            d = [ string:tokens(N, ".") || N <- config(domains, ?CFG, ["localhost"]) ],
             s = Socket,
             p = dict:new()
         }}.

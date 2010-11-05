@@ -1,2 +1,55 @@
-{forward, [ {{127,0,0,1}, 22} ]}.
-{domains, []}.
+%%%
+%%% seds configuration options
+%%%
+
+% Defaults to:
+%   {dynamic, false}.
+%   {acl, []}.
+%   {allowed_ports, [22]}.
+%   {forward, []}.
+%   {domains, ["localhost"]}.
+
+%%--------------------------------------------------------------------
+%%% Static forwarding (rules set on server)
+%%--------------------------------------------------------------------
+%% list of IP addresses and ports (0 offset)
+%%
+{forward, [
+    {{127,0,0,1}, 22},
+    {{127,0,0,1}, 2222},
+    ({10.10.10.10}, 22}
+]}.
+
+
+%%--------------------------------------------------------------------
+%%% Dynamic forwarding (rules set by client)
+%%--------------------------------------------------------------------
+% Enable dynamic forwarding 
+{dynamic, true}.
+
+% Whitelisted domains
+{domains, [
+    "a.example.com",
+    "b.example.com",
+    "example.net",
+    "a.b.c.example.org"
+]}.
+
+%%
+%% Whitelisted ports
+%%
+{allowed_ports, [22, 2222]}.
+
+%%
+%% Blacklisted IP addresses specified as lists
+%% of integers
+%%
+{acl, [
+    [10],
+    [127],
+    [172,16],
+    [192,168],
+    [255,255,255,255]
+]}.
+
+
