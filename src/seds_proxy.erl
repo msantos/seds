@@ -48,6 +48,7 @@
 
 
 -define(MAXDATA, 110).
+-define(MAXBUFSZ, 1024 * 1024 * 1024).  % 1 Mb
 
 % Interface
 -export([send/5]).
@@ -100,10 +101,17 @@ handle_sync_event(_Event, _From, StateName, State) ->
 %%
 
 % From server
-handle_info({tcp, Socket, Data}, proxy, #state{s = Socket} = State) ->
-    {next_state, proxy, State#state{
-            data = [Data|State#state.data]
-        }, ?PROXY_TIMEOUT};
+handle_info({tcp, Socket, Data}, proxy, #state{s = Socket, data = Buf} = State) ->
+    case iolist_size(Buf) of
+        N when N < ?MAXBUFSZ ->
+            {next_state, proxy, State#state{data = [Data|Buf]}, ?PROXY_TIMEOUT};
+        N when N < ?MAXBUFSZ*3 ->
+            error_logger:info_report([{buffer_disabled, N}]),
+            ok = inet:setopts(Socket, [{active, false}]),
+            {next_state, proxy, State#state{data = [Data|Buf]}, ?PROXY_TIMEOUT};
+        _ ->
+            {stop, enobufs, State}
+    end;
 
 % Connection closed
 handle_info({tcp_closed, Socket}, proxy, #state{s = Socket} = State) ->
@@ -139,7 +147,7 @@ connect(timeout, #state{ip = IP, port = Port} = State) ->
     {ok, Socket} = gen_tcp:connect(IP, Port, [
             binary,
             {packet, 0},
-            {active, once}
+            {active, true}
         ], 5000),
     {next_state, proxy, State#state{s = Socket}}.
 
@@ -196,7 +204,7 @@ proxy({down, IP, Port,
             ok = gen_udp:send(DNSSocket, IP, Port, Packet),
             {next_state, proxy, State, ?PROXY_TIMEOUT};
         Packet ->
-            ok = inet:setopts(Socket, [{active, once}]),
+            ok = inet:setopts(Socket, [{active, true}]),
             ok = gen_udp:send(DNSSocket, IP, Port, Packet),
             {next_state, proxy, State#state{
                 sum_down = Sum + Size,
@@ -283,5 +291,4 @@ encode(Data, #dns_rec{
                     type = Type,
                     data = Data
                 }]}).
-
 
