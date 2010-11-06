@@ -159,17 +159,14 @@ proxy({up, IP, Port, Rec, ClientSum, Data},
     Payload = base32:decode(string:to_upper(Data)),
     Sum1 = Sum + length(Payload),
 
-    case response(up, ClientSum, Sum, Rec) of
+    case response(up, ClientSum, Rec, State) of
         error ->
             {stop, {up, out_of_sync}, State};
-        duplicate ->
+        {duplicate, Packet} ->
             error_logger:info_report([{dropping, {IP, Port}}]),
+            ok = gen_udp:send(DNSSocket, IP, Port, Packet),
             {next_state, proxy, State, ?PROXY_TIMEOUT};
         Packet ->
-%            error_logger:info_report([
-%                {direction, up},
-%                {dns_query, Packet}
-%            ]),
             ok = gen_tcp:send(Socket, Payload),
             ok = gen_udp:send(DNSSocket, IP, Port, Packet),
             {next_state, proxy, State#state{sum_up = Sum1},
@@ -186,24 +183,19 @@ proxy({down, IP, Port,
             sum_down = Sum,
             dnsfd = DNSSocket,
             s = Socket,
-            data = Data,
-            buf = Buf
+            data = Data
         } = State) ->
 
     {Payload, Size, Rest} = data(Type, Data),
 
-    case response({down, Payload}, ClientSum, Sum, Rec) of
+    case response({down, Payload}, ClientSum, Rec, State) of
         error ->
             {stop, {down, out_of_sync}, State};
-        duplicate ->
+        {duplicate, Packet} ->
             error_logger:info_report([{resending, {IP, Port, Sum}}]),
-            ok = resend(DNSSocket, IP, Port, Type, Buf, Rec),
+            ok = gen_udp:send(DNSSocket, IP, Port, Packet),
             {next_state, proxy, State, ?PROXY_TIMEOUT};
         Packet ->
-%            error_logger:info_report([
-%                {direction, down},
-%                {dns_query, Rec}
-%            ]),
             ok = inet:setopts(Socket, [{active, once}]),
             ok = gen_udp:send(DNSSocket, IP, Port, Packet),
             {next_state, proxy, State#state{
@@ -259,13 +251,18 @@ label(String) ->
 
 
 %% Packet sum checks
-response(up, Sum, Sum, Rec) ->
+response(up, Sum, Rec, #state{sum_up = Sum}) ->
     encode(seq(Sum), Rec);
-response({down, Payload}, Sum, Sum, Rec) ->
+response({down, Payload}, Sum, Rec, #state{sum_down = Sum}) ->
     encode(Payload, Rec);
-response(_, Sum1, Sum2, _) when Sum1 < Sum2 ->
-    duplicate;
-response(_, Sum1, Sum2, _) when Sum1 > Sum2 ->
+response(up, Sum1, Rec, #state{sum_up = Sum2}) when Sum1 < Sum2 ->
+    {duplicate, encode(seq(Sum1), Rec)};
+response({down, _}, Sum1, 
+    #dns_rec{qdlist = [#dns_query{type = Type}|_]} = Rec,
+    #state{sum_down = Sum2, buf = Data}) when Sum1 < Sum2 ->
+    {Payload, _, _} = data(Type, Data),
+    {duplicate, encode(Payload, Rec)};
+response(_, _, _, _) ->
     error.
 
 
@@ -286,13 +283,5 @@ encode(Data, #dns_rec{
                     type = Type,
                     data = Data
                 }]}).
-
-
-% Resend a lost packet
-resend(_Socket, _IP, _Port, _Type, [], _Rec) ->
-    ok;
-resend(Socket, IP, Port, Type, Data, Rec) ->
-    {Payload, _, _} = data(Type, Data),
-    gen_udp:send(Socket, IP, Port, encode(Payload, Rec)).
 
 
