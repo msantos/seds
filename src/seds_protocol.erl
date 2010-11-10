@@ -71,7 +71,7 @@ session(#seds{
 %%%
 %%% The decode function is spawned as an unlinked process. If the
 %%% parsing succeeds, the data is returned to the gen_server. If
-%%% the parsing fails, the data is bad and is thrown away.
+%%% the process crashes and the query is dropped.
 %%% 
 %%--------------------------------------------------------------------
 
