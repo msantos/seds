@@ -264,7 +264,7 @@ response(up, Sum, Rec, #state{sum_up = Sum}) ->
 response({down, Payload}, Sum, Rec, #state{sum_down = Sum}) ->
     encode(Payload, Rec);
 response(up, Sum1, Rec, #state{sum_up = Sum2}) when Sum1 < Sum2 ->
-    {duplicate, encode(seq(Sum1), Rec)};
+    {duplicate, encode(seq(Sum2), Rec)};
 response({down, _}, Sum1, 
     #dns_rec{qdlist = [#dns_query{type = Type}|_]} = Rec,
     #state{sum_down = Sum2, buf = Data}) when Sum1 < Sum2 ->
