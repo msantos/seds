@@ -102,14 +102,15 @@ handle_sync_event(_Event, _From, StateName, State) ->
 
 % From server
 handle_info({tcp, Socket, Data}, proxy, #state{s = Socket, data = Buf} = State) ->
-    case iolist_size(Buf) of
-        N when N < ?MAXBUFSZ ->
+    N = iolist_size(Buf),
+    if 
+        N < ?MAXBUFSZ ->
             {next_state, proxy, State#state{data = [Data|Buf]}, ?PROXY_TIMEOUT};
-        N when N < ?MAXBUFSZ*3 ->
+        N < ?MAXBUFSZ*3 ->
             error_logger:info_report([{buffer_disabled, N}]),
             ok = inet:setopts(Socket, [{active, false}]),
             {next_state, proxy, State#state{data = [Data|Buf]}, ?PROXY_TIMEOUT};
-        _ ->
+        true ->
             {stop, enobufs, State}
     end;
 
