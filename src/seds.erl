@@ -65,7 +65,7 @@ start_link(Port) ->
 init([Port]) when Port > 1024 ->
     init(Port, []);
 init([Port]) ->
-    {ok, FD} = procket:listen(Port, [
+    {ok, FD} = procket:open(Port, [
         {protocol, udp},
         {family, inet},
         {type, dgram}
