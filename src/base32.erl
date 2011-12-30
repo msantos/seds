@@ -98,4 +98,3 @@ decode_(Bits, Out) ->
 	<<H:6>> -> Out++[H bsl 2];
 	<<H:7>> -> Out++[H bsl 1]
     end.
-
