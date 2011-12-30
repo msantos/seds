@@ -73,6 +73,8 @@ init([Port]) ->
     init(Port, [{fd, FD}]).
 
 init(Port, Opt) ->
+    process_flag(trap_exit, true),
+
     {ok, Socket} = gen_udp:open(Port, [
             binary,
             {active, once}
@@ -136,7 +138,8 @@ handle_info(Info, State) ->
     error_logger:error_report([{wtf, Info}]),
     {noreply, State}.
 
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{s = Socket}) ->
+    procket:close(Socket),
     ok.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
@@ -185,5 +188,3 @@ map(#state{
         f = Fwd,
         d = Domains
     }.
-
-
