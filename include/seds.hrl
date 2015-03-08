@@ -1,4 +1,4 @@
-%% Copyright (c) 2010, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2010-2015, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %% 
 %% Redistribution and use in source and binary forms, with or without
@@ -49,8 +49,7 @@
 -record(config, {
         acf = false,                    % allow client forwarding
         acl = [],                       % forward IP blacklist
-        acl_port = [22],                % forward IP blacklist
+        acl_port = [22],                % forward port blacklist
         f,                              % forwarders map
         d = []                          % domains
     }).
-

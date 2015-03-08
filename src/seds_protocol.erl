@@ -1,4 +1,4 @@
-%% Copyright (c) 2010-2012, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2010-2015, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %%
 %% Redistribution and use in source and binary forms, with or without
@@ -71,7 +71,7 @@ session(#seds{
 %%%
 %%% The decode function is spawned as an unlinked process. If the
 %%% parsing succeeds, the data is returned to the gen_server. If
-%%% the process crashes and the query is dropped.
+%%% the process crashes, the query is dropped.
 %%% 
 %%--------------------------------------------------------------------
 
