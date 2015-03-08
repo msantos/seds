@@ -93,18 +93,20 @@ init(Port, Opt) ->
 
 
 handle_call({send, {IP, Port, #dns_rec{} = Rec,
-            #seds{type = Type, sum = Sum, data = Data} = Query}},
+            #seds{dir = Dir, sum = Sum, data = Data} = Query}},
             _From, #state{p = Proxies} = State) ->
-    Session = seds_protocol:session(Query, map(State)),
+    Session = session(Query, State),
     case dict:find(Session, Proxies) of
         error when Sum == 0 ->
-            {Proxy, Proxies1} = proxy(Session, State),
-            ok = seds_proxy:send(Proxy, IP, Port, Rec, {Type, 0, Data}),
-            {reply, ok, State#state{p = Proxies1}};
+            {ok, Proxy} = proxy(Session, State),
+            ok = seds_proxy:send(Proxy, IP, Port, Rec, Dir, 0, Data),
+            {reply, ok, State#state{
+                    p = dict:store(Session, Proxy, Proxies)
+                }};
         error ->
             {reply, ok, State};
         {ok, Proxy} ->
-            ok = seds_proxy:send(Proxy, IP, Port, Rec, {Type, Sum, Data}),
+            ok = seds_proxy:send(Proxy, IP, Port, Rec, Dir, Sum, Data),
             {reply, ok, State}
     end;
 
@@ -120,7 +122,7 @@ handle_info({udp, Socket, IP, Port, Data}, #state{
         s = Socket
     } = State) ->
     ok = inet:setopts(Socket, [{active, once}]),
-    spawn(seds_protocol, decode, [{IP, Port, Data}, map(State)]),
+    spawn(fun() -> decode({IP, Port, Data}, State) end),
     {noreply, State};
 
 % Session terminated
@@ -155,17 +157,49 @@ code_change(_OldVsn, State, _Extra) ->
 %%%
 %%% Internal Functions
 %%%
-proxy({{IP, Port}, Id} = Session, #state{
-        s = Socket,
-        p = Proxies
+
+%%--------------------------------------------------------------------
+%%% Sessions: which IP:Port to send the data
+%%--------------------------------------------------------------------
+
+% Static list of forwarded hosts:port, identified from offset 0
+session(#seds{
+        forward = {session, Forward},
+        id = Id
+    }, #state{f = Map}) ->
+    F = case Forward + 1 of
+        N when N > length(Map) -> 1;
+        N when N < 1 -> 1;
+        N -> N
+    end,
+    {lists:nth(F, Map), Id};
+% Dynamic forwarding requested by client
+session(#seds{
+        forward = {forward, Forward},
+        id = Id
+    }, _State) ->
+    {Forward, Id}.
+
+% Decode the data embedded in the DNS record.
+%
+% The decode function is spawned as an unlinked process. If the
+% parsing succeeds, the data is returned to the gen_server. If
+% the process crashes, the query is dropped.
+%
+decode({IP, Port, Data}, State) ->
+    {ok, Query} = inet_dns:decode(Data),
+    Decoded = seds_protocol:decode(Query),
+    true = allow(Decoded, State),
+    seds:send({IP, Port, Query}, Decoded).
+
+proxy({{IP, Port}, Id}, #state{
+        s = Socket
     }) ->
     error_logger:info_report([
         {session_start, {IP, Port}},
         {id, Id}
     ]),
-    {ok, Pid} = seds_proxy:start_link(Socket, {IP, Port}),
-    {Pid, dict:store(Session, Pid, Proxies)}.
-
+    seds_proxy:start_link(Socket, IP, Port).
 
 config(Key, Cfg) ->
     config(Key, Cfg, undefined).
@@ -181,17 +215,31 @@ privpath(Cfg) ->
             Cfg
         ]).
 
-map(#state{
-        acf = ACF,
+allow(#seds{
+        forward = {forward, {IP, Port}},
+        domain = Domain
+    }, #state{
+        d = Domains,
+        acf = true,
         acl = ACL,
-        acl_port = ACP,
-        f = Fwd,
+        acl_port = ACP
+    }) ->
+    check_dn(Domain, Domains) and
+    check_acl(IP, ACL) and
+    check_port(Port, ACP);
+allow(#seds{
+        domain = Domain
+    }, #state{
         d = Domains
     }) ->
-    #config{
-        acf = ACF,
-        acl = ACL,
-        acl_port = ACP,
-        f = Fwd,
-        d = Domains
-    }.
+    check_dn(Domain, Domains).
+
+% Respond only to the configured list of domains
+check_dn(Domain, Domains) ->
+    [ N || N <- Domains, lists:suffix(N, Domain) ] /= [].
+
+check_acl({IP1,IP2,IP3,IP4}, ACL) ->
+    [ N || N <- ACL, lists:prefix(N, [IP1,IP2,IP3,IP4]) ] == [].
+
+check_port(Port, Allowed) ->
+    lists:member(Port, Allowed).

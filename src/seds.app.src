@@ -1,0 +1,5 @@
+{application, seds,
+    [{description, "Socket over DNS service"},
+    {vsn, "0.2.0"},
+    {registered, []},
+    {applications, [kernel, stdlib]}]}.

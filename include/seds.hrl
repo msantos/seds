@@ -38,18 +38,10 @@
 
 -record(seds, {
         q,                              % decoded DNS query
-        type,                           % 'up' or 'down'
+        dir,                            % 'up' or 'down'
         id = 0,                         % 2 or 4 byte session ID
         forward,                        % tuple describing destination ip/port
         sum = 0,                        % byte count
         domain = [],                    % domain names
         data = []                       % base64 encoded data
-    }).
-
--record(config, {
-        acf = false,                    % allow client forwarding
-        acl = [],                       % forward IP blacklist
-        acl_port = [22],                % forward port blacklist
-        f,                              % forwarders map
-        d = []                          % domains
     }).

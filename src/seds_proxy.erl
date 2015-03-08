@@ -51,8 +51,8 @@
 -define(MAXBUFSZ, 1024 * 1024 * 1024).  % 1 Mb
 
 % Interface
--export([send/5]).
--export([start_link/2]).
+-export([send/7]).
+-export([start_link/3]).
 -export([label/1]).
 % States
 -export([connect/2,proxy/2]).
@@ -64,23 +64,24 @@
 %%--------------------------------------------------------------------
 %%% Interface
 %%--------------------------------------------------------------------
-send(Pid, IP, Port, #dns_rec{} = Query, {up, Sum, Data}) when is_pid(Pid) ->
+send(Pid, IP, Port, #dns_rec{} = Query, up, Sum, Data) when is_pid(Pid) ->
     gen_fsm:send_event(Pid, {up, IP, Port, Query, Sum, Data});
-send(Pid, IP, Port, #dns_rec{} = Query, {down, Sum, _}) when is_pid(Pid) ->
+send(Pid, IP, Port, #dns_rec{} = Query, down, Sum, _) when is_pid(Pid) ->
     gen_fsm:send_event(Pid, {down, IP, Port, Query, Sum}).
 
 %%--------------------------------------------------------------------
 %%% Behaviours
 %%--------------------------------------------------------------------
-start_link(Socket, {ServerIP, ServerPort}) ->
+start_link(Socket, ServerIP, ServerPort) ->
     {ok, Pid} = gen_fsm:start(?MODULE, [
             Socket,
-            {ServerIP, ServerPort}
+            ServerIP,
+            ServerPort
         ], []),
     erlang:monitor(process, Pid),
     {ok, Pid}.
 
-init([DNSSocket, {ServerIP, ServerPort}]) ->
+init([DNSSocket, ServerIP, ServerPort]) ->
     process_flag(trap_exit, true),
     {ok, connect, #state{
             dnsfd = DNSSocket,
