@@ -47,7 +47,8 @@
         acl_port = [],                  % allowed ports (whitelist)
 
         f,                              % forwarders map
-        s,                              % socket
+        s,                              % socket port
+        fd,                             % socket fd
         d = [],                         % domains
         p = []                          % list of proxies
     }).
@@ -70,7 +71,7 @@ init([Port]) ->
         {family, inet},
         {type, dgram}
     ]),
-    init(Port, [{fd, FD}]).
+    init(0, [{fd, FD}]).
 
 init(Port, Opt) ->
     process_flag(trap_exit, true),
@@ -86,6 +87,7 @@ init(Port, Opt) ->
             f = config(forward, ?CFG, []),
             d = [ string:tokens(N, ".") || N <- config(domains, ?CFG, ["localhost"]) ],
             s = Socket,
+            fd = proplists:get_value(fd, Opt, undefined),
             p = dict:new()
         }}.
 
@@ -138,9 +140,14 @@ handle_info(Info, State) ->
     error_logger:error_report([{wtf, Info}]),
     {noreply, State}.
 
-terminate(_Reason, #state{s = Socket}) ->
-    procket:close(Socket),
+terminate(_Reason, #state{s = Socket, fd = undefined}) ->
+    gen_udp:close(Socket),
+    ok;
+terminate(_Reason, #state{s = Socket, fd = FD}) ->
+    gen_udp:close(Socket),
+    procket:close(FD),
     ok.
+
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
