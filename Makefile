@@ -1,15 +1,37 @@
+REBAR=$(shell which rebar || echo ./rebar)
+DEPSOLVER_PLT=$(CURDIR)/.depsolver_plt
 
-ERL=erl
+all: deps compile
 
-all: dir erl
+./rebar:
+	erl -noshell -s inets start -s ssl start \
+		-eval 'httpc:request(get, {"https://raw.github.com/wiki/rebar/rebar/rebar", []}, [], [{stream, "./rebar"}])' \
+		-s inets stop -s init stop
+	chmod +x ./rebar
 
-dir:
-	-@mkdir -p ebin deps
+compile: $(REBAR)
+	@$(REBAR) compile
 
-erl:
-	@$(ERL) -noinput +B \
-		-eval 'case make:all() of up_to_date -> halt(0); error -> halt(1) end.'
+clean: $(REBAR)
+	@$(REBAR) clean
 
-clean:  
-	@rm -fv ebin/*.beam
+deps: $(REBAR)
+	@$(REBAR) check-deps || $(REBAR) get-deps
 
+test: $(REBAR) compile
+	@$(REBAR) xref eunit recursive=false
+
+.PHONY: test dialyzer typer clean distclean
+
+$(DEPSOLVER_PLT):
+	@dialyzer --output_plt $(DEPSOLVER_PLT) --build_plt \
+		--apps erts kernel stdlib crypto
+
+dialyzer: $(DEPSOLVER_PLT)
+	@dialyzer -I include --plt $(DEPSOLVER_PLT) -Wrace_conditions --src src
+
+typer: $(DEPSOLVER_PLT)
+	@typer -I include --plt $(DEPSOLVER_PLT) -r ./src
+
+distclean: clean
+	@rm $(DEPSOLVER_PLT)
