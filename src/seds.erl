@@ -98,15 +98,23 @@ handle_call({send, {IP, Port, #dns_rec{} = Rec,
     Session = session(Query, State),
     case dict:find(Session, Proxies) of
         error when Sum == 0 ->
-            {ok, Proxy} = proxy(Session, State),
-            ok = seds_proxy:send(Proxy, IP, Port, Rec, Dir, 0, Data),
-            {reply, ok, State#state{
-                    p = dict:store(Session, Proxy, Proxies)
-                }};
+            P = try
+                {ok, Proxy} = proxy(Session, State),
+                ok = seds_proxy:send(Proxy, IP, Port, Rec, Dir, 0, Data),
+                dict:store(Session, Proxy, Proxies)
+            catch
+                _:_ ->
+                    Proxies
+            end,
+            {reply, ok, State#state{p = P}};
         error ->
             {reply, ok, State};
         {ok, Proxy} ->
-            ok = seds_proxy:send(Proxy, IP, Port, Rec, Dir, Sum, Data),
+            try
+                ok = seds_proxy:send(Proxy, IP, Port, Rec, Dir, Sum, Data)
+            catch
+                _:_ -> ok
+            end,
             {reply, ok, State}
     end;
 
