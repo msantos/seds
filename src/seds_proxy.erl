@@ -46,14 +46,11 @@
         data = [<<>>]   % list of binaries: data returned by proxied server
     }).
 
-
--define(MAXDATA, 110).
 -define(MAXBUFSZ, 1024 * 1024 * 1024).  % 1 Mb
 
 % Interface
 -export([send/7]).
 -export([start_link/3]).
--export([label/1]).
 % States
 -export([connect/2,proxy/2]).
 % Behaviours
@@ -196,7 +193,7 @@ proxy({down, IP, Port,
             data = Data
         } = State) ->
 
-    {Payload, Size, Rest} = data(Type, Data),
+    {Payload, Size, Rest} = seds_protocol:data(Type, Data),
 
     case response({down, Payload}, ClientSum, Rec, State) of
         error ->
@@ -224,72 +221,17 @@ seq(N) when is_integer(N) ->
     <<I1,I2,I3,I4>> = <<N:32>>,
     {I1,I2,I3,I4}.
 
-
-%% Encode the data returned by the server as a DNS record
-data(_, [<<>>]) ->
-    {[],0,<<>>};
-data(Type, Data) when is_list(Data) ->
-    data(Type, list_to_binary(lists:reverse(Data)));
-
-% TXT records
-data(txt, <<D1:?MAXDATA/bytes, D2:?MAXDATA/bytes, Rest/binary>>) ->
-    {[base64:encode_to_string(D1), base64:encode_to_string(D2)], 2*?MAXDATA, Rest};
-data(txt, <<D1:?MAXDATA/bytes, Rest/binary>>) ->
-    {[base64:encode_to_string(D1)], ?MAXDATA, Rest};
-data(txt, Data) ->
-    {[base64:encode_to_string(Data)], byte_size(Data), <<>>};
-
-% NULL records
-data(null, <<D1:(?MAXDATA*2)/bytes, Rest/binary>>) ->
-    {base64:encode(D1), ?MAXDATA*2, Rest};
-data(null, Data) ->
-    {base64:encode(Data), byte_size(Data), <<>>};
-
-% CNAME records
-data(cname, <<D1:?MAXDATA/bytes, Rest/binary>>) ->
-    {label(base32:encode(D1)), ?MAXDATA, Rest};
-data(cname, Data) ->
-    {label(base32:encode(Data)), byte_size(Data), <<>>}.
-
-
-%% Each component (or label) of a CNAME can have a
-%% max length of 63 bytes. A "." divides the labels.
-label(String) when byte_size(String) < ?MAXLABEL ->
-    String;
-label(String) ->
-    re:replace(String, ".{63}", "&.", [global, {return, list}]).
-
-
 %% Packet sum checks
 response(up, Sum, Rec, #state{sum_up = Sum}) ->
-    encode(seq(Sum), Rec);
+    seds_protocol:encode(seq(Sum), Rec);
 response({down, Payload}, Sum, Rec, #state{sum_down = Sum}) ->
-    encode(Payload, Rec);
+    seds_protocol:encode(Payload, Rec);
 response(up, Sum1, Rec, #state{sum_up = Sum2}) when Sum1 < Sum2 ->
-    {duplicate, encode(seq(Sum2), Rec)};
+    {duplicate, seds_protocol:encode(seq(Sum2), Rec)};
 response({down, _}, Sum1, 
     #dns_rec{qdlist = [#dns_query{type = Type}|_]} = Rec,
     #state{sum_down = Sum2, buf = Data}) when Sum1 < Sum2 ->
-    {Payload, _, _} = data(Type, Data),
-    {duplicate, encode(Payload, Rec)};
+    {Payload, _, _} = seds_protocol:data(Type, Data),
+    {duplicate, seds_protocol:encode(Payload, Rec)};
 response(_, _, _, _) ->
     error.
-
-
-%% Encode the DNS response to the client
-encode(Data, #dns_rec{
-        header = Header,
-        qdlist = [#dns_query{
-                domain = Domain,
-                type = Type
-            }|_]} = Rec) ->
-    inet_dns:encode(Rec#dns_rec{
-            header = Header#dns_header{
-                qr = true,
-                ra = true
-            },
-            anlist = [#dns_rr{
-                    domain = Domain,
-                    type = Type,
-                    data = Data
-                }]}).

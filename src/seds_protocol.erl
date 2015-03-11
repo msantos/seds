@@ -34,6 +34,9 @@
 -include("seds.hrl").
 
 -export([decode/1]).
+-export([encode/2,data/2]).
+
+-define(MAXDATA, 110).
 
 %%%
 %%% Handle decoding of the data embedded in the different
@@ -157,3 +160,55 @@ forward({_IP, _Port} = Forward) ->
 forward(Id) when is_integer(Id) ->
     <<_Opt:8, Forward:8, SessionId:16>> = <<Id:32>>,
     {{session, Forward}, SessionId}.
+
+
+%% Encode the data returned by the server as a DNS record
+data(_, [<<>>]) ->
+    {[],0,<<>>};
+data(Type, Data) when is_list(Data) ->
+    data(Type, list_to_binary(lists:reverse(Data)));
+
+% TXT records
+data(txt, <<D1:?MAXDATA/bytes, D2:?MAXDATA/bytes, Rest/binary>>) ->
+    {[base64:encode_to_string(D1), base64:encode_to_string(D2)], 2*?MAXDATA, Rest};
+data(txt, <<D1:?MAXDATA/bytes, Rest/binary>>) ->
+    {[base64:encode_to_string(D1)], ?MAXDATA, Rest};
+data(txt, Data) ->
+    {[base64:encode_to_string(Data)], byte_size(Data), <<>>};
+
+% NULL records
+data(null, <<D1:(?MAXDATA*2)/bytes, Rest/binary>>) ->
+    {base64:encode(D1), ?MAXDATA*2, Rest};
+data(null, Data) ->
+    {base64:encode(Data), byte_size(Data), <<>>};
+
+% CNAME records
+data(cname, <<D1:?MAXDATA/bytes, Rest/binary>>) ->
+    {label(base32:encode(D1)), ?MAXDATA, Rest};
+data(cname, Data) ->
+    {label(base32:encode(Data)), byte_size(Data), <<>>}.
+
+%% Each component (or label) of a CNAME can have a
+%% max length of 63 bytes. A "." divides the labels.
+label(String) when length(String) < ?MAXLABEL ->
+    String;
+label(String) ->
+    re:replace(String, ".{63}", "&.", [global, {return, list}]).
+
+%% Encode the DNS response to the client
+encode(Data, #dns_rec{
+        header = Header,
+        qdlist = [#dns_query{
+                domain = Domain,
+                type = Type
+            }|_]} = Rec) ->
+    inet_dns:encode(Rec#dns_rec{
+            header = Header#dns_header{
+                qr = true,
+                ra = true
+            },
+            anlist = [#dns_rr{
+                    domain = Domain,
+                    type = Type,
+                    data = Data
+                }]}).
