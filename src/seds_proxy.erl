@@ -157,29 +157,27 @@ connect(timeout, #state{ip = IP, port = Port} = State) ->
 %%
 
 % client sent data to be forwarded to server
-proxy({up, IP, Port, Rec, ClientSum, Data},
-    #state{
+proxy({up, IP, Port, Rec, ClientSum, Data}, #state{
         sum_up = Sum,
         dnsfd = DNSSocket,
         s = Socket
-    } = State) ->
-
+    } = State) when ClientSum =:= Sum ->
     Payload = base32:decode(string:to_upper(Data)),
     Sum1 = Sum + length(Payload),
     Reply = seds_protocol:encode(seq(Sum), Rec),
-
-    if
-        ClientSum == Sum ->
-            ok = gen_tcp:send(Socket, Payload),
-            ok = gen_udp:send(DNSSocket, IP, Port, Reply),
-            {next_state, proxy, State#state{sum_up = Sum1}, ?PROXY_TIMEOUT};
-        ClientSum < Sum ->
-            error_logger:info_report([{dropping, {IP, Port}}]),
-            ok = gen_udp:send(DNSSocket, IP, Port, Reply),
-            {next_state, proxy, State, ?PROXY_TIMEOUT};
-        ?otherwise ->
-            {stop, {up, out_of_sync}, State}
-    end;
+    ok = gen_tcp:send(Socket, Payload),
+    ok = gen_udp:send(DNSSocket, IP, Port, Reply),
+    {next_state, proxy, State#state{sum_up = Sum1}, ?PROXY_TIMEOUT};
+proxy({up, IP, Port, Rec, ClientSum, _Data}, #state{
+        sum_up = Sum,
+        dnsfd = DNSSocket
+    } = State) when ClientSum < Sum ->
+    error_logger:info_report([{dropping, {IP, Port}}]),
+    Reply = seds_protocol:encode(seq(Sum), Rec),
+    ok = gen_udp:send(DNSSocket, IP, Port, Reply),
+    {next_state, proxy, State, ?PROXY_TIMEOUT};
+proxy({up, _IP, _Port, _Rec, _ClientSum, _Data}, State) ->
+    {stop, {up, out_of_sync}, State};
 
 % client requested pending data from server
 proxy({down, IP, Port,
@@ -191,29 +189,34 @@ proxy({down, IP, Port,
             sum_down = Sum,
             dnsfd = DNSSocket,
             s = Socket,
-            data = Data,
+            data = Data
+        } = State) when ClientSum =:= Sum ->
+        {Payload, Size, Rest} = seds_protocol:data(Type, Data),
+        Reply = seds_protocol:encode(Payload, Rec),
+        ok = inet:setopts(Socket, [{active, true}]),
+        ok = gen_udp:send(DNSSocket, IP, Port, Reply),
+        {next_state, proxy, State#state{
+            sum_down = Sum + Size,
+            data = [Rest],
+            buf = Data
+        }, ?PROXY_TIMEOUT};
+proxy({down, IP, Port,
+        #dns_rec{
+            qdlist = [#dns_query{
+                    type = Type
+                }|_]} = Rec, ClientSum},
+        #state{
+            sum_down = Sum,
+            dnsfd = DNSSocket,
             buf = Buf
-        } = State) ->
-    if
-        ClientSum == Sum ->
-            {Payload, Size, Rest} = seds_protocol:data(Type, Data),
-            Reply = seds_protocol:encode(Payload, Rec),
-            ok = inet:setopts(Socket, [{active, true}]),
-            ok = gen_udp:send(DNSSocket, IP, Port, Reply),
-            {next_state, proxy, State#state{
-                sum_down = Sum + Size,
-                data = [Rest],
-                buf = Data
-            }, ?PROXY_TIMEOUT};
-        ClientSum < Sum ->
-            error_logger:info_report([{resending, {IP, Port, Sum}}]),
-            {Payload, _, _} = seds_protocol:data(Type, Buf),
-            Reply = seds_protocol:encode(Payload, Rec),
-            ok = gen_udp:send(DNSSocket, IP, Port, Reply),
-            {next_state, proxy, State, ?PROXY_TIMEOUT};
-        ?otherwise ->
-            {stop, {down, out_of_sync}, State}
-    end;
+        } = State) when ClientSum < Sum ->
+        error_logger:info_report([{resending, {IP, Port, Sum}}]),
+        {Payload, _, _} = seds_protocol:data(Type, Buf),
+        Reply = seds_protocol:encode(Payload, Rec),
+        ok = gen_udp:send(DNSSocket, IP, Port, Reply),
+        {next_state, proxy, State, ?PROXY_TIMEOUT};
+proxy({down, _IP, _Port, _Rec, _ClientSum}, State) ->
+    {stop, {down, out_of_sync}, State};
 
 proxy(timeout, State) ->
     {stop, timeout, State}.
