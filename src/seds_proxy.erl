@@ -189,8 +189,9 @@ proxy({down, IP, Port,
             sum_down = ClientSum,
             dnsfd = DNSSocket,
             s = Socket,
-            data = Data
+            data = Data0
         } = State) ->
+        Data = iolist_to_binary(lists:reverse(Data0)),
         {Payload, Size, Rest} = seds_protocol:data(Type, Data),
         Reply = seds_protocol:encode(Payload, Rec),
         ok = inet:setopts(Socket, [{active, true}]),

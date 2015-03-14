@@ -38,6 +38,10 @@
 
 -define(MAXDATA, 110).
 
+%%--------------------------------------------------------------------
+%%% Decode
+%%--------------------------------------------------------------------
+
 %%%
 %%% Handle decoding of the data embedded in the different
 %%% record types.
@@ -57,11 +61,11 @@ decode(#dns_rec{
                 }|_]
         }) ->
     {Prefix, Session} = lists:split(string:chr(Query, $-), Query),
-    type(Type, [Prefix|string:tokens(Session, ".-")]).
+    decode_type(Type, [Prefix|string:tokens(Session, ".-")]).
 
 % mfz.wiztb.onsgmcq.40966-0.id-372571.u.192.168.100.101-2222.x.example.com
 % B64._Nonce-Sum.id-SessionId.u.IP1.IP2.IP3.IP4-Port.x.Domain
-type(a, [Base64Nonce, Sum, "id", SessionId,
+decode_type(a, [Base64Nonce, Sum, "id", SessionId,
         "u", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
     IP = makeaddr({IP1,IP2,IP3,IP4}),
     Port1 = list_to_integer(Port),
@@ -75,7 +79,7 @@ type(a, [Base64Nonce, Sum, "id", SessionId,
         sum = list_to_integer(Sum),
         domain = Domain
     };
-type(a, [Base64Nonce, Sum, "id", SessionId,
+decode_type(a, [Base64Nonce, Sum, "id", SessionId,
         "u", IP1, IP2, IP3, IP4, "x"|Domain]) ->
     IP = makeaddr({IP1,IP2,IP3,IP4}),
     B64 = string:tokens(Base64Nonce, "."),
@@ -91,7 +95,7 @@ type(a, [Base64Nonce, Sum, "id", SessionId,
 
 % mfz.wiztb.onsgmcq.40966-0.id-372571.up.p.example.com
 % B64._Nonce-Sum.id-SessionId.up.Domain
-type(a, [Base64Nonce, Sum, "id", SessionId, "up"|Domain]) ->
+decode_type(a, [Base64Nonce, Sum, "id", SessionId, "up"|Domain]) ->
     B64 = string:tokens(Base64Nonce, "."),
     {Forward, Id} = forward(list_to_integer(SessionId)),
     #seds{
@@ -108,7 +112,7 @@ type(a, [Base64Nonce, Sum, "id", SessionId, "up"|Domain]) ->
 %
 % 0-29941.id-10498.d.192.168.100.101-2222.x.p.example.com
 % Sum-Nonce.id-SessionId.d.IP1.IP2.IP3.IP4-Port.x.Domain
-type(_Type, [Sum, _Nonce, "id", SessionId,
+decode_type(_Type, [Sum, _Nonce, "id", SessionId,
         "d", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
     IP = makeaddr({IP1,IP2,IP3,IP4}),
     Port1 = list_to_integer(Port),
@@ -120,7 +124,7 @@ type(_Type, [Sum, _Nonce, "id", SessionId,
         sum = list_to_sum(Sum),
         domain = Domain
     };
-type(_Type, [Sum, _Nonce, "id", SessionId,
+decode_type(_Type, [Sum, _Nonce, "id", SessionId,
         "d", IP1, IP2, IP3, IP4, "x"|Domain]) ->
     IP = makeaddr({IP1,IP2,IP3,IP4}),
     Forward = forward({IP, 22}),
@@ -134,7 +138,7 @@ type(_Type, [Sum, _Nonce, "id", SessionId,
 
 % 0-29941.id-10498.down.s.p.example.com
 % Sum-Nonce.id-SessionId.down.Domain
-type(_Type, [Sum, _Nonce, "id", SessionId, "down"|Domain]) ->
+decode_type(_Type, [Sum, _Nonce, "id", SessionId, "down"|Domain]) ->
     {Forward, Id} = forward(list_to_integer(SessionId)),
     #seds{
         dir = down,
@@ -146,27 +150,12 @@ type(_Type, [Sum, _Nonce, "id", SessionId, "down"|Domain]) ->
 
 
 %%--------------------------------------------------------------------
-%%% Internal functions
+%%% Encode
 %%--------------------------------------------------------------------
-makeaddr({IP1,IP2,IP3,IP4}) when is_list(IP1), is_list(IP2), is_list(IP3), is_list(IP4) ->
-    {list_to_integer(IP1), list_to_integer(IP2), list_to_integer(IP3), list_to_integer(IP4)}.
-
-% Remove the trailing dash and convert to an integer
-list_to_sum(N) when is_list(N) ->
-    list_to_integer(string:strip(N, right, $-)).
-
-forward({_IP, _Port} = Forward) ->
-    {forward, Forward};
-forward(Id) when is_integer(Id) ->
-    <<_Opt:8, Forward:8, SessionId:16>> = <<Id:32>>,
-    {{session, Forward}, SessionId}.
-
 
 %% Encode the data returned by the server as a DNS record
 data(_, [<<>>]) ->
     {[],0,<<>>};
-data(Type, Data) when is_list(Data) ->
-    data(Type, list_to_binary(lists:reverse(Data)));
 
 % TXT records
 data(txt, <<D1:?MAXDATA/bytes, D2:?MAXDATA/bytes, Rest/binary>>) ->
@@ -188,12 +177,6 @@ data(cname, <<D1:?MAXDATA/bytes, Rest/binary>>) ->
 data(cname, Data) ->
     {label(base32:encode(Data)), byte_size(Data), <<>>}.
 
-%% Each component (or label) of a CNAME can have a
-%% max length of 63 bytes. A "." divides the labels.
-label(String) when length(String) < ?MAXLABEL ->
-    String;
-label(String) ->
-    re:replace(String, ".{63}", "&.", [global, {return, list}]).
 
 %% Encode the DNS response to the client
 encode(Data, #dns_rec{
@@ -212,3 +195,33 @@ encode(Data, #dns_rec{
                     type = Type,
                     data = Data
                 }]}).
+
+%%--------------------------------------------------------------------
+%%% Internal functions
+%%--------------------------------------------------------------------
+
+%%
+%% decode
+%%
+makeaddr({IP1,IP2,IP3,IP4}) when is_list(IP1), is_list(IP2), is_list(IP3), is_list(IP4) ->
+    {list_to_integer(IP1), list_to_integer(IP2), list_to_integer(IP3), list_to_integer(IP4)}.
+
+% Remove the trailing dash and convert to an integer
+list_to_sum(N) when is_list(N) ->
+    list_to_integer(string:strip(N, right, $-)).
+
+forward({_IP, _Port} = Forward) ->
+    {forward, Forward};
+forward(Id) when is_integer(Id) ->
+    <<_Opt:8, Forward:8, SessionId:16>> = <<Id:32>>,
+    {{session, Forward}, SessionId}.
+
+%%
+%% encode
+%%
+%% Each component (or label) of a CNAME can have a
+%% max length of 63 bytes. A "." divides the labels.
+label(String) when length(String) < ?MAXLABEL ->
+    String;
+label(String) ->
+    re:replace(String, ".{63}", "&.", [global, {return, list}]).
