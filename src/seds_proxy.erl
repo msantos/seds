@@ -158,16 +158,16 @@ connect(timeout, #state{ip = IP, port = Port} = State) ->
 
 % client sent data to be forwarded to server
 proxy({up, IP, Port, Rec, ClientSum, Data}, #state{
-        sum_up = Sum,
+        sum_up = ClientSum,
         dnsfd = DNSSocket,
         s = Socket
-    } = State) when ClientSum =:= Sum ->
+    } = State) ->
     Payload = base32:decode(string:to_upper(Data)),
-    Sum1 = Sum + length(Payload),
-    Reply = seds_protocol:encode(seq(Sum), Rec),
+    Sum = ClientSum + length(Payload),
+    Reply = seds_protocol:encode(seq(ClientSum), Rec),
     ok = gen_tcp:send(Socket, Payload),
     ok = gen_udp:send(DNSSocket, IP, Port, Reply),
-    {next_state, proxy, State#state{sum_up = Sum1}, ?PROXY_TIMEOUT};
+    {next_state, proxy, State#state{sum_up = Sum}, ?PROXY_TIMEOUT};
 proxy({up, IP, Port, Rec, ClientSum, _Data}, #state{
         sum_up = Sum,
         dnsfd = DNSSocket
@@ -186,17 +186,17 @@ proxy({down, IP, Port,
                     type = Type
                 }|_]} = Rec, ClientSum},
         #state{
-            sum_down = Sum,
+            sum_down = ClientSum,
             dnsfd = DNSSocket,
             s = Socket,
             data = Data
-        } = State) when ClientSum =:= Sum ->
+        } = State) ->
         {Payload, Size, Rest} = seds_protocol:data(Type, Data),
         Reply = seds_protocol:encode(Payload, Rec),
         ok = inet:setopts(Socket, [{active, true}]),
         ok = gen_udp:send(DNSSocket, IP, Port, Reply),
         {next_state, proxy, State#state{
-            sum_down = Sum + Size,
+            sum_down = ClientSum + Size,
             data = [Rest],
             buf = Data
         }, ?PROXY_TIMEOUT};
