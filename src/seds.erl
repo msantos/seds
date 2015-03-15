@@ -43,26 +43,31 @@
         terminate/2, code_change/3]).
 
 -record(state, {
-        acf = false,                    % allow client forwarding
-        acl = [],                       % forward IP blacklist
-        acl_port = [],                  % allowed ports (whitelist)
+        acf = false :: boolean(),                       % allow client forwarding
+        acl = [] :: [[byte()]],                         % forward IP blacklist
+        acl_port = [inet:port_number()],                % allowed ports (whitelist)
 
-        f,                              % forwarders map
-        s,                              % socket port
-        fd,                             % socket fd
-        d = [],                         % domains
-        p = []                          % list of proxies
+        f :: [{inet:ip_address(),inet:port_number()}],  % forwarders map
+        s :: port(),                                    % socket port
+        fd :: integer(),                                % socket fd
+        d = [] :: [string()],                           % domains
+        p = dict:new()                                  % list of proxies
     }).
 
 
+-spec send(inet:ip_address(), inet:port_number(), #dns_rec{}, #seds{}) -> ok.
 send(IP, Port, #dns_rec{} = Rec, #seds{} = Query) ->
     gen_server:call(?SERVER, {send, IP, Port, Rec, Query}).
 
+-spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
 start_link() ->
     start_link(?DNS_PORT).
+
+-spec start_link(inet:port_number()) -> 'ignore' | {'error',_} | {'ok',pid()}.
 start_link(Port) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Port], []).
 
+-spec init([inet:port_number()]) -> {'ok',#state{}}.
 init([Port]) when Port > 1024 ->
     init(Port, []);
 init([Port]) ->
@@ -73,6 +78,8 @@ init([Port]) ->
     ]),
     init(0, [{fd, FD}]).
 
+-spec init(inet:port_number(),proplists:proplist()) ->
+    {'ok',#state{}}.
 init(Port, Opt) ->
     process_flag(trap_exit, true),
 
@@ -87,8 +94,7 @@ init(Port, Opt) ->
             f = config(forward, ?CFG, []),
             d = [ string:tokens(N, ".") || N <- config(domains, ?CFG, ["localhost"]) ],
             s = Socket,
-            fd = proplists:get_value(fd, Opt, undefined),
-            p = dict:new()
+            fd = proplists:get_value(fd, Opt, undefined)
         }}.
 
 

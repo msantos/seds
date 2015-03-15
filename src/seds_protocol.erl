@@ -74,7 +74,7 @@ decode_type(a, [Base64Nonce, Sum, "id", SessionId,
     #seds{
         dir = up,
         forward = Forward,
-        id = SessionId,
+        id = list_to_integer(SessionId),
         data = lists:flatten(lists:sublist(B64, length(B64)-1)),
         sum = list_to_integer(Sum),
         domain = Domain
@@ -87,7 +87,7 @@ decode_type(a, [Base64Nonce, Sum, "id", SessionId,
     #seds{
         dir = up,
         forward = Forward,
-        id = SessionId,
+        id = list_to_integer(SessionId),
         data = lists:flatten(lists:sublist(B64, length(B64)-1)),
         sum = list_to_integer(Sum),
         domain = Domain
@@ -120,7 +120,7 @@ decode_type(_Type, [Sum, _Nonce, "id", SessionId,
     #seds{
         dir = down,
         forward = Forward,
-        id = SessionId,
+        id = list_to_integer(SessionId),
         sum = list_to_sum(Sum),
         domain = Domain
     };
@@ -131,7 +131,7 @@ decode_type(_Type, [Sum, _Nonce, "id", SessionId,
     #seds{
         dir = down,
         forward = Forward,
-        id = SessionId,
+        id = list_to_integer(SessionId),
         sum = list_to_sum(Sum),
         domain = Domain
     };
