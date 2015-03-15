@@ -36,7 +36,8 @@
 
 -define(SERVER, ?MODULE).
 
--export([start_link/0, start_link/1, send/2]).
+-export([start_link/0, start_link/1]).
+-export([send/4]).
 -export([config/2, privpath/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
         terminate/2, code_change/3]).
@@ -54,9 +55,8 @@
     }).
 
 
-send({IP, Port, #dns_rec{} = Rec}, #seds{} = Query) ->
-    gen_server:call(?SERVER, {send, {IP, Port, Rec, Query}}).
-
+send(IP, Port, #dns_rec{} = Rec, #seds{} = Query) ->
+    gen_server:call(?SERVER, {send, IP, Port, Rec, Query}).
 
 start_link() ->
     start_link(?DNS_PORT).
@@ -92,9 +92,11 @@ init(Port, Opt) ->
         }}.
 
 
-handle_call({send, {IP, Port, #dns_rec{} = Rec,
-            #seds{dir = Dir, sum = Sum, data = Data} = Query}},
-            _From, #state{p = Proxies} = State) ->
+handle_call({send, IP, Port, Rec, #seds{
+            dir = Dir,
+            sum = Sum,
+            data = Data
+        } = Query}, _From, #state{p = Proxies} = State) ->
     Session = session(Query, State),
     case dict:find(Session, Proxies) of
         error when Sum == 0 ->
@@ -198,7 +200,7 @@ decode({IP, Port, Data}, State) ->
     {ok, Query} = inet_dns:decode(Data),
     Decoded = seds_protocol:decode(Query),
     true = allow(Decoded, State),
-    seds:send({IP, Port, Query}, Decoded).
+    seds:send(IP, Port, Query, Decoded).
 
 proxy({{IP, Port}, Id}, #state{
         s = Socket
