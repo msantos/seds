@@ -38,7 +38,7 @@
 
 -export([start_link/0, start_link/1]).
 -export([send/4]).
--export([config/2, privpath/1]).
+-export([privpath/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
         terminate/2, code_change/3]).
 
@@ -83,20 +83,26 @@ init([Port]) ->
 init(Port, Opt) ->
     process_flag(trap_exit, true),
 
+    Cfg = case file:consult(privpath(?CFG)) of
+        {ok, Map} -> Map;
+        {error,enoent} -> []
+    end,
+
     {ok, Socket} = gen_udp:open(Port, [
             binary,
             {active, once}
         ] ++ Opt),
+
     {ok, #state{
-            acf = config(dynamic, ?CFG, false),
-            acl = config(acl, ?CFG, []),
-            acl_port = config(allowed_ports, ?CFG, [22]),
-            f = config(forward, ?CFG, []),
-            d = [ string:tokens(N, ".") || N <- config(domains, ?CFG, ["localhost"]) ],
+            acf = proplists:get_value(dynamic, Cfg, false),
+            acl = proplists:get_value(acl, ?CFG, []),
+            acl_port = proplists:get_value(allowed_ports, Cfg, [22]),
+            f = proplists:get_value(forward, ?CFG, []),
+            d = [ string:tokens(N, ".") ||
+                N <- proplists:get_value(domains, Cfg, ["localhost"]) ],
             s = Socket,
             fd = proplists:get_value(fd, Opt, undefined)
         }}.
-
 
 handle_call({send, IP, Port, Rec, #seds{
             dir = Dir,
@@ -138,7 +144,7 @@ handle_info({udp, Socket, IP, Port, Data}, #state{
         s = Socket
     } = State) ->
     ok = inet:setopts(Socket, [{active, once}]),
-    spawn(fun() -> decode({IP, Port, Data}, State) end),
+    spawn(fun() -> decode(IP, Port, Data, State) end),
     {noreply, State};
 
 % Session terminated
@@ -178,7 +184,10 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Sessions: which IP:Port to send the data
 %%--------------------------------------------------------------------
 
+
 % Static list of forwarded hosts:port, identified from offset 0
+-spec session(#seds{},#state{}) ->
+    {{inet:ip_address(),inet:port_number()},non_neg_integer()}.
 session(#seds{
         forward = {session, Forward},
         id = Id
@@ -202,12 +211,15 @@ session(#seds{
 % parsing succeeds, the data is returned to the gen_server. If
 % the process crashes, the query is dropped.
 %
-decode({IP, Port, Data}, State) ->
+-spec decode(inet:ip_address(),inet:port_number(),binary(),#state{}) -> 'ok'.
+decode(IP, Port, Data, State) ->
     {ok, Query} = inet_dns:decode(Data),
     Decoded = seds_protocol:decode(Query),
     true = allow(Decoded, State),
     seds:send(IP, Port, Query, Decoded).
 
+-spec proxy({{inet:ip_address(),inet:port_number()},non_neg_integer()},
+    #state{}) -> {'ok',pid()}.
 proxy({{IP, Port}, Id}, #state{
         s = Socket
     }) ->
@@ -217,12 +229,7 @@ proxy({{IP, Port}, Id}, #state{
     ]),
     seds_proxy:start_link(Socket, IP, Port).
 
-config(Key, Cfg) ->
-    config(Key, Cfg, undefined).
-config(Key, Cfg, Default) ->
-    {ok, Map} = file:consult(privpath(Cfg)),
-    proplists:get_value(Key, Map, Default).
-
+-spec privpath(file:filename_all()) -> file:filename_all().
 privpath(Cfg) ->
     filename:join([
             filename:dirname(code:which(?MODULE)),
@@ -231,6 +238,7 @@ privpath(Cfg) ->
             Cfg
         ]).
 
+-spec allow(#seds{},#state{}) -> boolean().
 allow(#seds{
         forward = {forward, {IP, Port}},
         domain = Domain
@@ -251,11 +259,14 @@ allow(#seds{
     check_dn(Domain, Domains).
 
 % Respond only to the configured list of domains
+-spec check_dn(string(),[string()]) -> boolean().
 check_dn(Domain, Domains) ->
     [ N || N <- Domains, lists:suffix(N, Domain) ] /= [].
 
+-spec check_acl({byte(),byte(),byte(),byte()},[[byte()]]) -> boolean().
 check_acl({IP1,IP2,IP3,IP4}, ACL) ->
     [ N || N <- ACL, lists:prefix(N, [IP1,IP2,IP3,IP4]) ] == [].
 
+-spec check_port(inet:port_number(),[inet:port_number()]) -> boolean().
 check_port(Port, Allowed) ->
     lists:member(Port, Allowed).
