@@ -46,7 +46,7 @@
         data = [<<>>]   % list of binaries: data returned by proxied server
     }).
 
--define(MAXBUFSZ, 1024 * 1024 * 1024).  % 1 Mb
+-define(MAXBUFSZ, 1024 * 1024).  % 1 Mb
 -define(otherwise, true).
 
 % Interface
