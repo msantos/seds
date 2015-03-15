@@ -37,8 +37,7 @@
 -define(MAXLABEL, 63).  % 1 byte for length of label
 
 -record(seds, {
-        q,                                          % decoded DNS query
-        dir :: 'up' | 'down',                       % 'up' or 'down'
+        dir = up :: 'up' | 'down',                  % 'up' or 'down'
         id = 0 :: non_neg_integer(),                % 2 or 4 byte session ID
         forward :: {session,non_neg_integer()} |    % tuple describing destination ip/port
             {forward,{inet:ip_address(),inet:port_number()}},

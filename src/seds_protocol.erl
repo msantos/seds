@@ -34,7 +34,7 @@
 -include("seds.hrl").
 
 -export([decode/1]).
--export([encode/2,data/2]).
+-export([encode/2,data/2,seq/1]).
 
 -define(MAXDATA, 110).
 
@@ -46,6 +46,7 @@
 %%% Handle decoding of the data embedded in the different
 %%% record types.
 %%%
+-spec decode(binary() | #dns_rec{}) -> #seds{}.
 decode(Query) when is_binary(Query) ->
     {ok, Rec} = inet_dns:decode(Query),
     decode(Rec);
@@ -65,6 +66,7 @@ decode(#dns_rec{
 
 % mfz.wiztb.onsgmcq.40966-0.id-372571.u.192.168.100.101-2222.x.example.com
 % B64._Nonce-Sum.id-SessionId.u.IP1.IP2.IP3.IP4-Port.x.Domain
+-spec decode_type(atom(),[string(),...]) -> #seds{}.
 decode_type(a, [Base64Nonce, Sum, "id", SessionId,
         "u", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
     IP = makeaddr({IP1,IP2,IP3,IP4}),
@@ -154,7 +156,9 @@ decode_type(_Type, [Sum, _Nonce, "id", SessionId, "down"|Domain]) ->
 %%--------------------------------------------------------------------
 
 %% Encode the data returned by the server as a DNS record
-data(_, [<<>>]) ->
+-spec data(atom(),binary()) ->
+    {iodata(),non_neg_integer(),binary()}.
+data(_, <<>>) ->
     {[],0,<<>>};
 
 % TXT records
@@ -177,8 +181,14 @@ data(cname, <<D1:?MAXDATA/bytes, Rest/binary>>) ->
 data(cname, Data) ->
     {label(base32:encode(Data)), byte_size(Data), <<>>}.
 
+% The sequence number is encoded as an IPv4 address in the DNS reply.
+-spec seq(integer()) -> {byte(),byte(),byte(),byte()}.
+seq(N) when is_integer(N) ->
+    <<I1,I2,I3,I4>> = <<N:32>>,
+    {I1,I2,I3,I4}.
 
 %% Encode the DNS response to the client
+-spec encode(iodata() | {byte(),byte(),byte(),byte()}, #dns_rec{}) -> binary().
 encode(Data, #dns_rec{
         header = Header,
         qdlist = [#dns_query{
@@ -203,13 +213,19 @@ encode(Data, #dns_rec{
 %%
 %% decode
 %%
+-spec makeaddr({string(),string(),string(),string()}) ->
+    {integer(),integer(),integer(),integer()}.
 makeaddr({IP1,IP2,IP3,IP4}) when is_list(IP1), is_list(IP2), is_list(IP3), is_list(IP4) ->
     {list_to_integer(IP1), list_to_integer(IP2), list_to_integer(IP3), list_to_integer(IP4)}.
 
 % Remove the trailing dash and convert to an integer
+-spec list_to_sum(string()) -> integer().
 list_to_sum(N) when is_list(N) ->
     list_to_integer(string:strip(N, right, $-)).
 
+-spec forward(non_neg_integer() | {inet:ip_address(),inet:port_number()}) ->
+    {'forward' | {'session',byte()},
+        char() | {inet:ip_address(),inet:port_number()}}.
 forward({_IP, _Port} = Forward) ->
     {forward, Forward};
 forward(Id) when is_integer(Id) ->
@@ -221,6 +237,7 @@ forward(Id) when is_integer(Id) ->
 %%
 %% Each component (or label) of a CNAME can have a
 %% max length of 63 bytes. A "." divides the labels.
+-spec label(string()) -> string().
 label(String) when length(String) < ?MAXLABEL ->
     String;
 label(String) ->

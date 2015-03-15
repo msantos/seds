@@ -58,10 +58,11 @@
 -export([init/1, handle_event/3, handle_sync_event/4,
         handle_info/3, terminate/3, code_change/4]).
 
-
 %%--------------------------------------------------------------------
 %%% Interface
 %%--------------------------------------------------------------------
+-spec send(pid(),inet:ip_address(),inet:port_number(),#dns_rec{},
+    'down' | 'up',non_neg_integer(),string()) -> 'ok'.
 send(Pid, IP, Port, #dns_rec{} = Query, up, Sum, Data) when is_pid(Pid) ->
     gen_fsm:send_event(Pid, {up, IP, Port, Query, Sum, Data});
 send(Pid, IP, Port, #dns_rec{} = Query, down, Sum, _) when is_pid(Pid) ->
@@ -70,6 +71,7 @@ send(Pid, IP, Port, #dns_rec{} = Query, down, Sum, _) when is_pid(Pid) ->
 %%--------------------------------------------------------------------
 %%% Behaviours
 %%--------------------------------------------------------------------
+-spec start_link(port(),inet:ip_address(),inet:port_number()) -> {'ok',pid()}.
 start_link(Socket, ServerIP, ServerPort) ->
     {ok, Pid} = gen_fsm:start(?MODULE, [
             Socket,
@@ -86,7 +88,6 @@ init([DNSSocket, ServerIP, ServerPort]) ->
             ip = ServerIP,
             port = ServerPort
         }, 0}.
-
 
 handle_event(_Event, StateName, State) ->
     {next_state, StateName, State}.
@@ -143,6 +144,7 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%
 %% connect
 %%
+-spec connect('timeout',#state{}) -> {'next_state','proxy',#state{}}.
 connect(timeout, #state{ip = IP, port = Port} = State) ->
     {ok, Socket} = gen_tcp:connect(IP, Port, [
             binary,
@@ -151,12 +153,19 @@ connect(timeout, #state{ip = IP, port = Port} = State) ->
         ], 5000),
     {next_state, proxy, State#state{s = Socket}}.
 
-
 %%
 %% proxy
 %%
 
 % client sent data to be forwarded to server
+-spec proxy('timeout' |
+    {'down',inet:ip_address(),inet:port_number(),#dns_rec{},
+        non_neg_integer(),string()} |
+    {'up',inet:ip_address(),inet:port_number(),#dns_rec{},
+        non_neg_integer(),string()},#state{}) ->
+    {'stop','timeout' | {'down','out_of_sync'} |
+        {'up','out_of_sync'},_} |
+    {'next_state','proxy',#state{},non_neg_integer()}.
 proxy({up, IP, Port, Rec, ClientSum, Data}, #state{
         sum_up = ClientSum,
         dnsfd = DNSSocket,
@@ -164,7 +173,7 @@ proxy({up, IP, Port, Rec, ClientSum, Data}, #state{
     } = State) ->
     Payload = base32:decode(string:to_upper(Data)),
     Sum = ClientSum + length(Payload),
-    Reply = seds_protocol:encode(seq(ClientSum), Rec),
+    Reply = seds_protocol:encode(seds_protocol:seq(ClientSum), Rec),
     ok = gen_tcp:send(Socket, Payload),
     ok = gen_udp:send(DNSSocket, IP, Port, Reply),
     {next_state, proxy, State#state{sum_up = Sum}, ?PROXY_TIMEOUT};
@@ -173,7 +182,7 @@ proxy({up, IP, Port, Rec, ClientSum, _Data}, #state{
         dnsfd = DNSSocket
     } = State) when ClientSum < Sum ->
     error_logger:info_report([{dropping, {IP, Port}}]),
-    Reply = seds_protocol:encode(seq(Sum), Rec),
+    Reply = seds_protocol:encode(seds_protocol:seq(Sum), Rec),
     ok = gen_udp:send(DNSSocket, IP, Port, Reply),
     {next_state, proxy, State, ?PROXY_TIMEOUT};
 proxy({up, _IP, _Port, _Rec, _ClientSum, _Data}, State) ->
@@ -221,10 +230,3 @@ proxy({down, _IP, _Port, _Rec, _ClientSum}, State) ->
 
 proxy(timeout, State) ->
     {stop, timeout, State}.
-
-%%--------------------------------------------------------------------
-%%% Internal Functions
-%%--------------------------------------------------------------------
-seq(N) when is_integer(N) ->
-    <<I1,I2,I3,I4>> = <<N:32>>,
-    {I1,I2,I3,I4}.
