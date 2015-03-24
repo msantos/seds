@@ -241,4 +241,5 @@ forward(Id) when is_integer(Id) ->
 label(String) when length(String) < ?MAXLABEL ->
     String;
 label(String) ->
-    re:replace(String, ".{63}", "&.", [global, {return, list}]).
+    re:replace(String, lists:concat([".{", ?MAXLABEL, "}"]), "&.",
+        [global, {return, list}]).
