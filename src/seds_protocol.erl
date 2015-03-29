@@ -70,7 +70,7 @@ decode(#dns_rec{
 decode_type(a, [Base64Nonce, Sum, "id", SessionId,
         "u", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
     IP = makeaddr({IP1,IP2,IP3,IP4}),
-    Port1 = list_to_integer(Port),
+    Port1 = string_to_port_number(Port),
     B64 = string:tokens(Base64Nonce, "."),
     Forward = forward({IP, Port1}),
     #seds{
@@ -117,7 +117,7 @@ decode_type(a, [Base64Nonce, Sum, "id", SessionId, "up"|Domain]) ->
 decode_type(_Type, [Sum, _Nonce, "id", SessionId,
         "d", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
     IP = makeaddr({IP1,IP2,IP3,IP4}),
-    Port1 = list_to_integer(Port),
+    Port1 = string_to_port_number(Port),
     Forward = forward({IP, Port1}),
     #seds{
         dir = down,
@@ -209,14 +209,27 @@ encode(Data, #dns_rec{
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
+-spec string_to_byte(string()) -> byte().
+string_to_byte(N) ->
+    string_to_int(N, 1 bsl 8).
+
+-spec string_to_port_number(string()) -> inet:port_number().
+string_to_port_number(N) ->
+    string_to_int(N, 1 bsl 16).
+
+string_to_int(N, Max) ->
+    case list_to_integer(N) of
+        X when X < Max -> X;
+        _ -> exit(badarg)
+    end.
 
 %%
 %% decode
 %%
 -spec makeaddr({string(),string(),string(),string()}) ->
-    {integer(),integer(),integer(),integer()}.
+    {byte(),byte(),byte(),byte()}.
 makeaddr({IP1,IP2,IP3,IP4}) when is_list(IP1), is_list(IP2), is_list(IP3), is_list(IP4) ->
-    {list_to_integer(IP1), list_to_integer(IP2), list_to_integer(IP3), list_to_integer(IP4)}.
+    {string_to_byte(IP1), string_to_byte(IP2), string_to_byte(IP3), string_to_byte(IP4)}.
 
 % Remove the trailing dash and convert to an integer
 -spec list_to_sum(string()) -> integer().

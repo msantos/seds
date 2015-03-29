@@ -101,3 +101,45 @@ data_test() ->
     ],
     [ Result = seds_protocol:data(Type, Bin) || {{Type,Bin}, Result} <- Data ],
     ok.
+
+bad_ipv4_test() ->
+    Domain = "0-1234.id-98765.d.127.257.0.1-2222.x.sshdns.example.com",
+    Rec = #dns_rec{
+        header = #dns_header{
+            qr = false,
+            opcode = 'query'
+        },
+        qdlist = [
+            #dns_query{
+                domain = Domain,
+                type = txt,
+                class = in
+            }
+        ]
+    },
+    ?assertException(
+        exit,
+        badarg,
+        seds_protocol:decode(Rec)
+    ).
+
+bad_port_test() ->
+    Domain = "0-1234.id-98765.d.127.225.0.1-123456.x.sshdns.example.com",
+    Rec = #dns_rec{
+        header = #dns_header{
+            qr = false,
+            opcode = 'query'
+        },
+        qdlist = [
+            #dns_query{
+                domain = Domain,
+                type = txt,
+                class = in
+            }
+        ]
+    },
+    ?assertException(
+        exit,
+        badarg,
+        seds_protocol:decode(Rec)
+    ).
