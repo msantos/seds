@@ -28,16 +28,19 @@
 %% LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 %% ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
--module(seds).
--export([
-        start/0,
-        stop/0
-    ]).
+-module(seds_app).
 
-start() ->
-    ok = application:start(seds),
-    ok.
+-behaviour(application).
 
-stop() ->
-    ok = application:stop(seds),
+%% Application callbacks
+-export([start/2, stop/1]).
+
+%% ===================================================================
+%% Application callbacks
+%% ===================================================================
+
+start(_StartType, _StartArgs) ->
+    seds_sup:start_link().
+
+stop(_State) ->
     ok.

@@ -28,16 +28,36 @@
 %% LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 %% ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
--module(seds).
--export([
-        start/0,
-        stop/0
-    ]).
+-module(seds_sup).
 
-start() ->
-    ok = application:start(seds),
-    ok.
+-behaviour(supervisor).
 
-stop() ->
-    ok = application:stop(seds),
-    ok.
+%% API
+-export([start_link/0]).
+
+%% Supervisor callbacks
+-export([init/1]).
+
+%% Helper macro for declaring children of supervisor
+-define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+
+%% ===================================================================
+%% API functions
+%% ===================================================================
+
+start_link() ->
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+%% ===================================================================
+%% Supervisor callbacks
+%% ===================================================================
+
+init([]) ->
+    {ok, { {one_for_all, 5, 10}, [
+                {seds_srv,
+                    {seds_srv, start_link, []},
+                    permanent,
+                    5000,
+                    worker,
+                    [blst_srv]}
+            ]} }.

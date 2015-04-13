@@ -13,3 +13,5 @@ deps/
 Session.vim
 .netrwhist
 *~
+rel/sys.config
+_rel/

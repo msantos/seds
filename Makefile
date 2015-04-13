@@ -1,4 +1,5 @@
 REBAR=$(shell which rebar || echo ./rebar)
+RELX=relx
 DEPSOLVER_PLT=$(CURDIR)/.depsolver_plt
 
 all: deps compile
@@ -17,6 +18,9 @@ clean: $(REBAR)
 
 deps: $(REBAR)
 	@$(REBAR) check-deps || $(REBAR) get-deps
+
+release:
+	@$(RELX) --sys_config rel/sys.config release tar
 
 test: $(REBAR) compile
 	@$(REBAR) xref eunit recursive=false

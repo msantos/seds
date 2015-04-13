@@ -32,8 +32,6 @@
 -define(DNS_PORT, 53).
 -define(PROXY_TIMEOUT, 5 * 60 * 1000).
 
--define(CFG, "seds.cfg").
-
 -define(MAXLABEL, 63).  % 1 byte for length of label
 
 -record(seds, {

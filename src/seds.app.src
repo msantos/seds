@@ -1,5 +1,8 @@
-{application, seds,
-    [{description, "Socket over DNS service"},
-    {vsn, "0.2.0"},
-    {registered, []},
-    {applications, [kernel, stdlib]}]}.
+{application, seds, [
+    {description, "Socket over DNS service"},
+    {vsn, "0.3.0"},
+    {registered, [seds_srv,seds_sup]},
+    {applications, [kernel, stdlib]},
+    {mod, { seds_app, []}},
+    {env, []}
+    ]}.
