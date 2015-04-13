@@ -59,5 +59,5 @@ init([]) ->
                     permanent,
                     5000,
                     worker,
-                    [blst_srv]}
+                    [seds_srv]}
             ]} }.
