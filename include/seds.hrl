@@ -29,9 +29,7 @@
 %% ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
 
--define(DNS_PORT, 53).
 -define(PROXY_TIMEOUT, 5 * 60 * 1000).
-
 -define(MAXLABEL, 63).  % 1 byte for length of label
 
 -record(seds, {
