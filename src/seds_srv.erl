@@ -60,11 +60,13 @@ send(IP, Port, #dns_rec{} = Rec, #seds{} = Query) ->
 
 -spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
-
--spec init([]) -> {'ok',#state{}}.
-init([]) ->
     Port = application:get_env(seds, port, 53),
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [Port], []).
+
+-spec init([inet:port_number()]) -> {'ok',#state{}}.
+init([Port]) when Port > 1024 ->
+    init(Port, []);
+init([Port]) ->
     {ok, FD} = procket:open(Port, [
         {protocol, udp},
         {family, inet},
