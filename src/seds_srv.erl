@@ -60,29 +60,34 @@ send(IP, Port, #dns_rec{} = Rec, #seds{} = Query) ->
 
 -spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
 start_link() ->
+    IP = application:get_env(seds, ip, any),
     Port = application:get_env(seds, port, 53),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [Port], []).
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [IP,Port], []).
 
--spec init([inet:port_number()]) -> {'ok',#state{}}.
-init([Port]) when Port > 1024 ->
-    init(Port, []);
-init([Port]) ->
-    {ok, FD} = procket:open(Port, [
-        {protocol, udp},
-        {family, inet},
-        {type, dgram}
-    ]),
-    init(0, [{fd, FD}]).
+-spec init([inet:ip_address() | inet:port_number()]) -> {'ok',#state{}}.
+init([IP, Port]) when Port > 1024 ->
+    init(IP, Port, []);
+init([IP, Port]) ->
+    Options = [{protocol, udp}, {family, inet}, {type, dgram}] ++ case IP of
+        any -> [];
+        IP -> [{ip, IP}]
+    end,
 
--spec init(inet:port_number(),proplists:proplist()) ->
+    {ok, FD} = procket:open(Port, Options),
+
+    init(any, 0, [{fd, FD}]).
+
+-spec init(any | inet:ip_address(),inet:port_number(),proplists:proplist()) ->
     {'ok',#state{}}.
-init(Port, Opt) ->
+init(IP, Port, Opt) ->
     process_flag(trap_exit, true),
 
-    {ok, Socket} = gen_udp:open(Port, [
-            binary,
-            {active, once}
-        ] ++ Opt),
+    Options = [binary, {active,once}] ++ case IP of
+        any -> [];
+        IP -> [{ip, IP}]
+    end ++ Opt,
+
+    {ok, Socket} = gen_udp:open(Port, Options),
 
     {ok, #state{
             acf = application:get_env(seds, dynamic, false),
@@ -174,7 +179,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Sessions: which IP:Port to send the data
 %%--------------------------------------------------------------------
-
 
 % Static list of forwarded hosts:port, identified from offset 0
 -spec session(#seds{},#state{}) ->
