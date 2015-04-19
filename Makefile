@@ -14,6 +14,7 @@ compile: $(REBAR)
 	@$(REBAR) compile
 
 clean: $(REBAR)
+	-@$(RM) -rf _rel
 	@$(REBAR) clean
 
 deps: $(REBAR)

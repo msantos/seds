@@ -107,7 +107,7 @@ handle_info({tcp, Socket, Data}, proxy, #state{s = Socket, data = Buf} = State) 
         N < ?MAXBUFSZ ->
             {next_state, proxy, State#state{data = [Data|Buf]}, ?PROXY_TIMEOUT};
         N < ?MAXBUFSZ*3 ->
-            error_logger:info_report([{buffer_disabled, N}]),
+            lager:debug("buffer_disabled: ~p bytes", [N]),
             ok = inet:setopts(Socket, [{active, false}]),
             {next_state, proxy, State#state{data = [Data|Buf]}, ?PROXY_TIMEOUT};
         ?otherwise ->
@@ -124,13 +124,16 @@ terminate(Reason, StateName, #state{
         sum_up = Up,
         sum_down = Down
     }) ->
-    error_logger:info_report([
-            {session_end, {IP, Port}},
-            {bytes_sent, Up},
-            {bytes_rcvd, Down},
-            {state, StateName},
-            {reason, Reason}
-        ]),
+    lager:info(
+        "Connection ended from ~s port ~p: ~p bytes sent, ~p bytes recvd (state ~p, reason ~p)", [
+            inet_parse:ntoa(IP),
+            Port,
+            Up,
+            Down,
+            StateName,
+            Reason
+        ]
+    ),
     ok.
 
 code_change(_OldVsn, StateName, State, _Extra) ->
@@ -181,7 +184,8 @@ proxy({up, IP, Port, Rec, ClientSum, _Data}, #state{
         sum_up = Sum,
         dnsfd = DNSSocket
     } = State) when ClientSum < Sum ->
-    error_logger:info_report([{dropping, {IP, Port}}]),
+    lager:info("dropping previously seen packet from ~s port ~p",
+        [inet_parse:ntoa(IP), Port]),
     Reply = seds_protocol:encode(seds_protocol:seq(Sum), Rec),
     ok = gen_udp:send(DNSSocket, IP, Port, Reply),
     {next_state, proxy, State, ?PROXY_TIMEOUT};
@@ -220,7 +224,11 @@ proxy({down, IP, Port,
             dnsfd = DNSSocket,
             buf = Buf
         } = State) when ClientSum < Sum ->
-        error_logger:info_report([{resending, {IP, Port, Sum}}]),
+        lager:info("resending buffer to ~s port ~p sum:~p", [
+                inet_parse:ntoa(IP),
+                Port,
+                Sum
+            ]),
         {Payload, _, _} = seds_protocol:data(Type, Buf),
         Reply = seds_protocol:encode(Payload, Rec),
         ok = gen_udp:send(DNSSocket, IP, Port, Reply),

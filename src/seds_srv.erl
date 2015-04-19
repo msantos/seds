@@ -129,7 +129,7 @@ handle_call({send, IP, Port, Rec, #seds{
     end;
 
 handle_call(Request, _From, State) ->
-    error_logger:error_report([{wtf, Request}]),
+    lager:error("unhandled call: ~p", [Request]),
     {reply, ok, State}.
 
 handle_cast(_Msg, State) ->
@@ -157,7 +157,7 @@ handle_info({'DOWN', _Ref, process, Pid, _Reason}, #state{
 
 % WTF?
 handle_info(Info, State) ->
-    error_logger:error_report([{wtf, Info}]),
+    lager:error("unhandled info", [Info]),
     {noreply, State}.
 
 terminate(_Reason, #state{s = Socket, fd = undefined}) ->
@@ -218,9 +218,10 @@ decode(IP, Port, Data, State) ->
 proxy({{IP, Port}, Id}, #state{
         s = Socket
     }) ->
-    error_logger:info_report([
-        {session_start, {IP, Port}},
-        {id, Id}
+    lager:info("New connection from ~s port ~p id:~p", [
+        inet_parse:ntoa(IP),
+        Port,
+        Id
     ]),
     seds_proxy:start_link(Socket, IP, Port).
 

@@ -35,6 +35,7 @@
     ]).
 
 start() ->
+    ok = lager:start(),
     ok = application:start(seds),
     ok.
 
