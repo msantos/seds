@@ -218,7 +218,7 @@ decode(IP, Port, Data, State) ->
 proxy({{IP, Port}, Id}, #state{
         s = Socket
     }) ->
-    lager:info("New connection from ~s port ~p id:~p", [
+    lager:info("New connection dst ~s port ~p id:~p", [
         inet_parse:ntoa(IP),
         Port,
         Id

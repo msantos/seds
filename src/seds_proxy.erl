@@ -125,7 +125,7 @@ terminate(Reason, StateName, #state{
         sum_down = Down
     }) ->
     lager:info(
-        "Connection ended from ~s port ~p: ~p bytes sent, ~p bytes recvd (state ~p, reason ~p)", [
+        "Connection ended dst ~s port ~p: ~p bytes sent, ~p bytes recvd (state ~p, reason ~p)", [
             inet_parse:ntoa(IP),
             Port,
             Up,
@@ -184,7 +184,7 @@ proxy({up, IP, Port, Rec, ClientSum, _Data}, #state{
         sum_up = Sum,
         dnsfd = DNSSocket
     } = State) when ClientSum < Sum ->
-    lager:info("dropping previously seen packet from ~s port ~p",
+    lager:info("dropping previously seen packet dst ~s port ~p",
         [inet_parse:ntoa(IP), Port]),
     Reply = seds_protocol:encode(seds_protocol:seq(Sum), Rec),
     ok = gen_udp:send(DNSSocket, IP, Port, Reply),
@@ -224,7 +224,7 @@ proxy({down, IP, Port,
             dnsfd = DNSSocket,
             buf = Buf
         } = State) when ClientSum < Sum ->
-        lager:info("resending buffer to ~s port ~p sum:~p", [
+        lager:info("resending buffer dst ~s port ~p sum:~p", [
                 inet_parse:ntoa(IP),
                 Port,
                 Sum
