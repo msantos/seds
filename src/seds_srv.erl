@@ -46,7 +46,7 @@
         acl = [] :: [[byte()]],                         % forward IP blacklist
         acl_port = [inet:port_number()],                % allowed ports (whitelist)
 
-        f :: [{inet:ip_address(),inet:port_number()}],  % forwarders map
+        f = [] :: [{inet:ip_address(),inet:port_number()}],  % forwarders map
         s :: port(),                                    % socket port
         fd :: integer(),                                % socket fd
         d = [] :: [string()],                           % domains
