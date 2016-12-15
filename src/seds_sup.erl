@@ -30,6 +30,8 @@
 %% POSSIBILITY OF SUCH DAMAGE.
 -module(seds_sup).
 
+-compile([{parse_transform, lager_transform}]).
+
 -behaviour(supervisor).
 
 %% API

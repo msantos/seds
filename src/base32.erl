@@ -3,6 +3,8 @@
 -module(base32).
 -author('jlarky@gmail.com').
 
+-compile([{parse_transform, lager_transform}]).
+
 -export([b32/1, encode/1,unb32/1, decode/1 ]).
 
 

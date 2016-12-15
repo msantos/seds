@@ -31,6 +31,8 @@
 -module(seds_srv).
 -behaviour(gen_server).
 
+-compile([{parse_transform, lager_transform}]).
+
 -include_lib("kernel/src/inet_dns.hrl").
 -include("seds.hrl").
 

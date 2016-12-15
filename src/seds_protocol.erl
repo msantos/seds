@@ -30,6 +30,8 @@
 %% POSSIBILITY OF SUCH DAMAGE.
 -module(seds_protocol).
 
+-compile([{parse_transform, lager_transform}]).
+
 -include_lib("kernel/src/inet_dns.hrl").
 -include("seds.hrl").
 

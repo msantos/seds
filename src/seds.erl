@@ -34,6 +34,8 @@
         stop/0
     ]).
 
+-compile([{parse_transform, lager_transform}]).
+
 start() ->
     ok = lager:start(),
     ok = application:start(seds),

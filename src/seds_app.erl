@@ -30,6 +30,8 @@
 %% POSSIBILITY OF SUCH DAMAGE.
 -module(seds_app).
 
+-compile([{parse_transform, lager_transform}]).
+
 -behaviour(application).
 
 %% Application callbacks
