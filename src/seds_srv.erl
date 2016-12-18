@@ -162,9 +162,6 @@ handle_info(Info, State) ->
     lager:error("unhandled info", [Info]),
     {noreply, State}.
 
-terminate(_Reason, #state{s = Socket, fd = undefined}) ->
-    gen_udp:close(Socket),
-    ok;
 terminate(_Reason, #state{s = Socket, fd = FD}) ->
     gen_udp:close(Socket),
     procket:close(FD),
