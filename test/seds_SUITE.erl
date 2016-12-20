@@ -1,4 +1,4 @@
-%%% Copyright (c) 2015, Michael Santos <michael.santos@gmail.com>
+%%% Copyright (c) 2015-2016, Michael Santos <michael.santos@gmail.com>
 %%%
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -11,15 +11,31 @@
 %%% WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 %%% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
--module(seds_tests).
+-module(seds_SUITE).
 
--compile(export_all).
-
--include_lib("eunit/include/eunit.hrl").
+-include_lib("common_test/include/ct.hrl").
 -include_lib("kernel/src/inet_dns.hrl").
 -include_lib("seds/include/seds.hrl").
 
-decode_test() ->
+-export([
+        all/0
+    ]).
+
+-export([
+        decode/1,
+        data/1,
+        bad_ipv4/1,
+        bad_port/1
+    ]).
+
+all() -> [
+          decode,
+          data,
+          bad_ipv4,
+          bad_port
+         ].
+
+decode(_Config) ->
     Domains = [
         % Data request for dynamically forwarded address with port
         {"0-1234.id-98765.d.127.0.0.1-2222.x.sshdns.example.com",
@@ -74,7 +90,7 @@ decode_test() ->
         end || {Domain, Result} <- Domains ],
     ok.
 
-data_test() ->
+data(_Config) ->
     Small = binary:copy(<<"x">>, 60),
     Large = binary:copy(<<"x">>, 256),
     Data = [
@@ -102,7 +118,7 @@ data_test() ->
     [ Result = seds_protocol:data(Type, Bin) || {{Type,Bin}, Result} <- Data ],
     ok.
 
-bad_ipv4_test() ->
+bad_ipv4(_Config) ->
     Domain = "0-1234.id-98765.d.127.257.0.1-2222.x.sshdns.example.com",
     Rec = #dns_rec{
         header = #dns_header{
@@ -117,13 +133,10 @@ bad_ipv4_test() ->
             }
         ]
     },
-    ?assertException(
-        exit,
-        badarg,
-        seds_protocol:decode(Rec)
-    ).
+    {'EXIT',badarg} = (catch seds_protocol:decode(Rec)),
+    ok.
 
-bad_port_test() ->
+bad_port(_Config) ->
     Domain = "0-1234.id-98765.d.127.225.0.1-123456.x.sshdns.example.com",
     Rec = #dns_rec{
         header = #dns_header{
@@ -138,8 +151,5 @@ bad_port_test() ->
             }
         ]
     },
-    ?assertException(
-        exit,
-        badarg,
-        seds_protocol:decode(Rec)
-    ).
+    {'EXIT',badarg} = (catch seds_protocol:decode(Rec)),
+    ok.
