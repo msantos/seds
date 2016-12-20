@@ -1,7 +1,6 @@
 .PHONY: compile clean release test dialyzer typer
 
 REBAR ?= rebar3
-RELX ?= relx
 
 compile:
 	@$(REBAR) compile
@@ -11,10 +10,10 @@ clean:
 	@$(REBAR) clean
 
 release:
-	@$(RELX) --sys_config rel/sys.config release tar
+	@$(REBAR) release
 
 test:
-	@$(REBAR) xref eunit recursive=false
+	@$(REBAR) xref eunit
 
 dialyzer: $(DEPSOLVER_PLT)
 	@$(REBAR) dialyzer
