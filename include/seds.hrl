@@ -1,4 +1,4 @@
-%% Copyright (c) 2010-2015, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2010-2016, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %% 
 %% Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,6 @@
         forward :: {session,non_neg_integer()} |    % tuple describing destination ip/port
             {forward,{inet:ip_address(),inet:port_number()}},
         sum = 0 :: non_neg_integer(),               % byte count
-        domain = [] :: string(),                    % domain names
+        domain = [] :: [string()],                  % domain names
         data = [] :: string()                       % base64 encoded data
     }).
