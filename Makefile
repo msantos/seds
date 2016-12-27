@@ -21,6 +21,7 @@ dialyzer: $(DEPSOLVER_PLT)
 typer:
 	@typer \
         -pa _build/default/lib/seds/ebin \
+        -pa _build/default/lib/lager/ebin \
         -I include \
         --plt _build/default/*_plt \
         -r ./src
