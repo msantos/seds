@@ -1,4 +1,4 @@
-%% Copyright (c) 2010-2015, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2010-2016, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %%
 %% Redistribution and use in source and binary forms, with or without
@@ -37,15 +37,18 @@
 -include("seds.hrl").
 
 -record(state, {
-        ip,
-        port,
-        dnsfd,          % dns server socket
-        s,              % proxied socket
+          ip :: inet:ip_address(),
+          port :: inet:port_number(),
+          dnsfd :: inet:socket() | undefined,   % dns server socket
+          s :: inet:socket() | undefined,       % proxied socket
 
-        sum_up = 0,     % number of bytes sent to server
-        sum_down = 0,   % number of bytes received from server
-        buf = [],       % last packet sent (for resend)
-        data = [<<>>]   % list of binaries: data returned by proxied server
+          sum_up = 0 :: non_neg_integer(),      % number of bytes sent to
+                                                % server
+          sum_down = 0 :: non_neg_integer(),    % number of bytes received
+                                                % from server
+          buf = [] :: iodata(),                 % last packet sent (for resend)
+          data = [<<>>] :: [binary()]           % list of binaries: data
+                                                % returned by proxied server
     }).
 
 -define(MAXBUFSZ, 1024 * 1024).  % 1 Mb
