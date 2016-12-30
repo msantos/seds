@@ -7,11 +7,19 @@
 
 -export([b32/1, encode/1,unb32/1, decode/1 ]).
 
+% $a..$z | $A..$Z | $2..$7
+-type base32char() :: 97 .. 122 | 65 .. 90 | 50 .. 55.
+-type base32string() :: [base32char()].
 
-%% @spec b32(integer()) -> [base32char()]
+-export_type([
+              base32char/0,
+              base32string/0
+             ]).
+
 %% @doc returns base32 character corresponding to V like 1 -> 'B', 31 -> '7'.
 %% V is integer from 0 to 31
 %% @see unb32/1
+-spec b32(integer()) -> [base32char()].
 b32(V) when V < 0 -> % wrong argument
     throw({b32,wrong_argument, V});
 b32(V) when V < 26 ->
@@ -27,9 +35,9 @@ b32_(V, Buf) ->
     [A]=b32(V rem 32),
     b32_(V bsr 5, [A|Buf]).
 
-%% @spec encode(string()) -> base32string()
 %% @doc returns base32 encoded string of String
 %% @see decode/1
+-spec encode(binary() | string()) -> base32string().
 encode(Bin) when is_binary(Bin) ->
     lists:reverse(encode_(Bin, _Out=[]));
 encode(String) ->
@@ -52,9 +60,9 @@ encode_(Bin, Out) ->
 	    [B]=b32(A),encode_(T, [B|Out])
     end.
 
-%% @spec unb32(base32char()) -> integer()
 %% @doc A=unb32(b32(A))
 %% @see b32/1
+-spec unb32([base32char()]) -> integer().
 unb32([V]) when ((V >= $A) and (V =< $Z)) ->
     V-$A;
 unb32([V]) when ((V >= $2) and (V =< $7)) ->
@@ -66,9 +74,9 @@ unb32(String=[_|_]) ->
 			Acc*32+unb32([Char])
 		end, 0, String).
 
-%% @spec decode(base32string()) -> string()
 %% @doc returns base32 decoded string of String
 %% @see encode/1
+-spec decode(base32string()) -> string().
 decode(Bin) when is_binary(Bin) ->
     decode(binary_to_list(Bin));
 decode(String) ->
