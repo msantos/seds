@@ -52,7 +52,7 @@
         s :: port(),                                    % socket port
         fd :: integer(),                                % socket fd
         d = [] :: [string()],                           % domains
-        p = dict:new()                                  % list of proxies
+        p = dict:new() :: dict:dict()                   % list of proxies
     }).
 
 
