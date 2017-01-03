@@ -13,7 +13,7 @@ release:
 	@$(REBAR) release
 
 test:
-	@$(REBAR) xref eunit
+	@$(REBAR) do xref, ct
 
 dialyzer: $(DEPSOLVER_PLT)
 	@$(REBAR) dialyzer
