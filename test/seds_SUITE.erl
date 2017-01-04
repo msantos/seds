@@ -42,9 +42,9 @@ decode(_Config) ->
             #seds{
                 dir = down,
                 id = 98765,
-                forward = {forward,{{127,0,0,1},2222}},
+                forward = {forward, {{127, 0, 0, 1}, 2222}},
                 sum = 0,
-                domain = ["sshdns","example","com"],
+                domain = ["sshdns", "example", "com"],
                 data = []
             }
         },
@@ -54,9 +54,9 @@ decode(_Config) ->
             #seds{
                 dir = down,
                 id = 98765,
-                forward = {forward,{{127,0,0,1},22}},
+                forward = {forward, {{127, 0, 0, 1}, 22}},
                 sum = 0,
-                domain = ["sshdns","example","com"],
+                domain = ["sshdns", "example", "com"],
                 data = []
             }
         },
@@ -66,9 +66,9 @@ decode(_Config) ->
             #seds{
                 dir = down,
                 id = 33229,
-                forward = {session,1},
+                forward = {session, 1},
                 sum = 0,
-                domain = ["sshdns","example","com"],
+                domain = ["sshdns", "example", "com"],
                 data = []
             }
         }
@@ -95,27 +95,43 @@ data(_Config) ->
     Large = binary:copy(<<"x">>, 256),
     Data = [
         {{txt, Small},
-            {["eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4"], 60,<<>>}},
+            {["eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh"
+              "4eHh4eHh4eHh4eHh4"], 60, <<>>}},
         {{txt, Large},
-         {["eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=",
-           "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg="],
-           220,<<"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">>}},
+         {["eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eH"
+           "h4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4"
+           "eHh4eHh4eHh4eHg=",
+           "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eH"
+           "h4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4"
+           "eHh4eHh4eHh4eHg="],
+           220, <<"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">>}},
 
         {{null, Small},
-         {<<"eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4">>,
-            60,<<>>}},
+         {<<"eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+            "Hh4eHh4eHh4eHh4">>,
+            60, <<>>}},
         {{null, Large},
-         {<<"eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==">>,
-            220,<<"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">>}},
+         {<<"eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+            "Hh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eH"
+            "h4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh"
+            "4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4"
+            "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==">>,
+            220, <<"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">>}},
 
         {{cname, Small},
-         {"PB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6D.YPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DY",
-                60,<<>>}},
+         {"PB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6D.YPB"
+          "4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DY",
+                60, <<>>}},
         {{cname, Large},
-         {"PB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6D.YPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6.DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DY",
-            110, <<"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">>}}
+         {"PB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6D.YPB"
+          "4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6.DYPB4H"
+          "Q6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DY",
+            110, <<"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">>}}
     ],
-    [ Result = seds_protocol:data(Type, Bin) || {{Type,Bin}, Result} <- Data ],
+    [ Result = seds_protocol:data(Type, Bin)
+      || {{Type, Bin}, Result} <- Data ],
     ok.
 
 bad_ipv4(_Config) ->
@@ -133,7 +149,7 @@ bad_ipv4(_Config) ->
             }
         ]
     },
-    {'EXIT',badarg} = (catch seds_protocol:decode(Rec)),
+    {'EXIT', badarg} = (catch seds_protocol:decode(Rec)),
     ok.
 
 bad_port(_Config) ->
@@ -151,5 +167,5 @@ bad_port(_Config) ->
             }
         ]
     },
-    {'EXIT',badarg} = (catch seds_protocol:decode(Rec)),
+    {'EXIT', badarg} = (catch seds_protocol:decode(Rec)),
     ok.
