@@ -70,7 +70,7 @@ start_link() ->
 init([IP, Port]) when Port > 1024 ->
     init(IP, Port, []);
 init([IP, Port]) ->
-    Options = [{protocol, udp}, {family, inet}, {type, dgram}] ++ case IP of
+    Options = [{protocol, udp}, {family, inet6}, {type, dgram}] ++ case IP of
         any -> [];
         IP -> [{ip, IP}]
     end,
@@ -84,7 +84,7 @@ init([IP, Port]) ->
 init(IP, Port, Opt) ->
     process_flag(trap_exit, true),
 
-    Options = [binary, {active,once}] ++ case IP of
+    Options = [inet6, binary, {active,once}] ++ case IP of
         any -> [];
         IP -> [{ip, IP}]
     end ++ Opt,
