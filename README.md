@@ -23,11 +23,12 @@ Quick Start
 Using Low Ports
 ---------------
 
-_seds_ uses procket to listen on port 53. See:
+`seds` uses procket to listen on port 53. For instructions on setting
+up the procket setuid helper, see:
 
     https://github.com/msantos/procket
 
-Using ports abouve 1024 does not require any additional configuration.
+Using ports above 1023 does not require any additional configuration.
 
 Configuration
 -------------
@@ -36,41 +37,66 @@ The seds configuration uses Erlang terms. Options are:
 
     ip:
         type: inet:ip_address()
-        description: binds service to this IP address
+        default: any
+        description:
+            Binds service to this IP address
 
     port:
         type: inet:port_number()
-        description: port for service
+        default: 53
+        description:
+            Port bound by service. Using a port below 1024 requires
+            setting up the procket setuid helper.
 
     forward:
         type: [{inet:ip_address(), inet:port_number()}]
+        default: []
         description:
             List of destination IP addresses/port. The forwarded session
-            can be selected by number (sessions begin with 0).
+            can be selected by number (the list of sessions is numbered
+            from 0).
 
     dynamic:
         type: true | false
+        default: false
         description:
             Enables client specified session forwarding. The destination
             ports can be controlled using the 'allowed_ports' and
-            'acl' option.
+            'acl' options.
 
     domains:
         type: [string()]
+        default: []
         description:
             Whitelist of accepted domain names. Queries for domains not
-            on this list will be ignored.
+            included in this list will be ignored.
 
     allowed_ports:
         type: [inet:port_number()]
+        default: [22]
         description:
-            Whitelist of ports allowed when dynamic sessions is enabled.
+            Whitelist of ports allowed when the dynamic option (client
+            specified forwarding) is enabled.
 
     acl:
         type: [[char()]]
+        default: []
         description:
             Blacklisted network classes. Can be used, for example,
             to disallow dynamic session forwarding to localhost.
+
+            For example, to disallow IPv4 private networks and the
+            broadcast address:
+
+~~~ erlang
+{acl, [
+        [10],
+        [127],
+        [172,16],
+        [192,168],
+        [255,255,255,255]
+      ]}
+~~~
 
 Example
 -------
