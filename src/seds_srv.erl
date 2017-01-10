@@ -49,8 +49,10 @@
         acl_port = [inet:port_number()],                % allowed ports (whitelist)
 
         f = [] :: [{inet:ip_address(),inet:port_number()}],  % forwarders map
-        s :: port(),                                    % socket port
+        s :: port(),                                    % IPv4 socket port
+        s6 :: port(),                                   % IPv6 socket port
         fd :: integer(),                                % socket fd
+        fd6 :: integer(),                               % IPv6 socket fd
         d = [] :: [string()],                           % domains
         p = dict:new() :: dict:dict()                   % list of proxies
     }).
@@ -70,25 +72,27 @@ start_link() ->
 init([IP, Port]) when Port > 1024 ->
     init(IP, Port, []);
 init([IP, Port]) ->
-    Options = [{protocol, udp}, {family, inet6}, {type, dgram}] ++ case IP of
+    Options = [{protocol, udp}, {type, dgram}] ++ case IP of
         any -> [];
         IP -> [{ip, IP}]
     end,
 
-    {ok, FD} = procket:open(Port, Options),
+    {ok, FD} = procket:open(Port, Options ++ [{family, inet}]),
+    {ok, FD6} = procket:open(Port, Options ++ [{family, inet6}]),
 
-    init(any, 0, [{fd, FD}]).
+    init(any, 0, [{fd, FD}, {fd6, FD6}]).
 
 -spec init(any | inet:ip_address(),inet:port_number(),proplists:proplist()) ->
     {'ok',#state{}}.
 init(IP, Port, Opt) ->
     process_flag(trap_exit, true),
 
-    Options = [inet6, binary, {active,once}] ++ case IP of
+    Options = [binary, {active,once}] ++ case IP of
         any -> [];
         IP -> [{ip, IP}]
     end ++ Opt,
 
+    {ok, Socket6} = gen_udp:open(Port, Options ++ [inet6]),
     {ok, Socket} = gen_udp:open(Port, Options),
 
     {ok, #state{
@@ -99,7 +103,9 @@ init(IP, Port, Opt) ->
             d = [ string:tokens(N, ".") ||
                 N <- application:get_env(seds, domains, ["localhost"]) ],
             s = Socket,
-            fd = proplists:get_value(fd, Opt, undefined)
+            s6 = Socket6,
+            fd = proplists:get_value(fd, Opt, undefined),
+            fd6 = proplists:get_value(fd, Opt, undefined)
         }}.
 
 handle_call({send, IP, Port, Rec, #seds{
