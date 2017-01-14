@@ -44,15 +44,15 @@
         terminate/2, code_change/3]).
 
 -record(state, {
-        acf = false :: boolean(),                       % allow client forwarding
-        acl = [] :: [[byte()]],                         % forward IP blacklist
-        acl_port = [inet:port_number()],                % allowed ports (whitelist)
+        acf = false :: boolean(),           % allow client forwarding
+        acl = [] :: [[byte()]],             % forward IP blacklist
+        acl_port = [inet:port_number()],    % allowed ports (whitelist)
 
-        f = [] :: [{inet:ip_address(),inet:port_number()}],  % forwarders map
-        s :: port(),                                    % socket port
-        fd :: integer(),                                % socket fd
-        d = [] :: [string()],                           % domains
-        p = dict:new() :: dict:dict()                   % list of proxies
+        f = [] :: [{inet:ip_address(), inet:port_number()}],  % forwarders map
+        s :: port(),                        % socket port
+        fd :: integer(),                    % socket fd
+        d = [] :: [string()],               % domains
+        p = dict:new() :: dict:dict()       % list of proxies
     }).
 
 
@@ -60,13 +60,13 @@
 send(IP, Port, #dns_rec{} = Rec, #seds{} = Query) ->
     gen_server:call(?SERVER, {send, IP, Port, Rec, Query}).
 
--spec start_link() -> 'ignore' | {'error',_} | {'ok',pid()}.
+-spec start_link() -> 'ignore' | {'error', _} | {'ok', pid()}.
 start_link() ->
     IP = application:get_env(seds, ip, any),
     Port = application:get_env(seds, port, 53),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [IP,Port], []).
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [IP, Port], []).
 
--spec init([inet:ip_address() | inet:port_number()]) -> {'ok',#state{}}.
+-spec init([inet:ip_address() | inet:port_number()]) -> {'ok', #state{}}.
 init([IP, Port]) when Port > 1024 ->
     init(IP, Port, []);
 init([IP, Port]) ->
@@ -79,12 +79,12 @@ init([IP, Port]) ->
 
     init(any, 0, [{fd, FD}]).
 
--spec init(any | inet:ip_address(),inet:port_number(),proplists:proplist()) ->
-    {'ok',#state{}}.
+-spec init(any | inet:ip_address(), inet:port_number(), proplists:proplist()) ->
+    {'ok', #state{}}.
 init(IP, Port, Opt) ->
     process_flag(trap_exit, true),
 
-    Options = [inet, binary, {active,once}] ++ case IP of
+    Options = [inet, binary, {active, once}] ++ case IP of
         any -> [];
         IP -> [{ip, IP}]
     end ++ Opt,
@@ -151,8 +151,8 @@ handle_info({'DOWN', _Ref, process, Pid, _Reason}, #state{
     } = State) ->
     {noreply, State#state{
             p = dict:filter(
-                fun (_,V) when V == Pid -> false;
-                    (_,_) -> true
+                fun (_, V) when V == Pid -> false;
+                    (_, _) -> true
                 end,
                 Proxies)
         }};
@@ -180,8 +180,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 
 % Static list of forwarded hosts:port, identified from offset 0
--spec session(#seds{},#state{}) ->
-    {{inet:ip_address(),inet:port_number()},non_neg_integer()}.
+-spec session(#seds{}, #state{}) ->
+    {{inet:ip_address(), inet:port_number()}, non_neg_integer()}.
 session(#seds{
         forward = {session, Forward},
         id = Id
@@ -205,15 +205,15 @@ session(#seds{
 % parsing succeeds, the data is returned to the gen_server. If
 % the process crashes, the query is dropped.
 %
--spec decode(inet:ip_address(),inet:port_number(),binary(),#state{}) -> 'ok'.
+-spec decode(inet:ip_address(), inet:port_number(), binary(), #state{}) -> 'ok'.
 decode(IP, Port, Data, State) ->
     {ok, Query} = inet_dns:decode(Data),
     Decoded = seds_protocol:decode(Query),
     true = allow(Decoded, State),
     seds_srv:send(IP, Port, Query, Decoded).
 
--spec proxy({{inet:ip_address(),inet:port_number()},non_neg_integer()},
-    #state{}) -> {'ok',pid()}.
+-spec proxy({{inet:ip_address(), inet:port_number()}, non_neg_integer()},
+    #state{}) -> {'ok', pid()}.
 proxy({{IP, Port}, Id}, #state{
         s = Socket
     }) ->
@@ -224,7 +224,7 @@ proxy({{IP, Port}, Id}, #state{
     ]),
     seds_proxy:start_link(Socket, IP, Port).
 
--spec allow(#seds{},#state{}) -> boolean().
+-spec allow(#seds{}, #state{}) -> boolean().
 allow(#seds{
         forward = {forward, {IP, Port}},
         domain = Domain
@@ -245,14 +245,14 @@ allow(#seds{
     check_dn(Domain, Domains).
 
 % Respond only to the configured list of domains
--spec check_dn(string(),[string()]) -> boolean().
+-spec check_dn(string(), [string()]) -> boolean().
 check_dn(Domain, Domains) ->
     [ N || N <- Domains, lists:suffix(N, Domain) ] /= [].
 
--spec check_acl({byte(),byte(),byte(),byte()},[[byte()]]) -> boolean().
-check_acl({IP1,IP2,IP3,IP4}, ACL) ->
-    [ N || N <- ACL, lists:prefix(N, [IP1,IP2,IP3,IP4]) ] == [].
+-spec check_acl({byte(), byte(), byte(), byte()}, [[byte()]]) -> boolean().
+check_acl({IP1, IP2, IP3, IP4}, ACL) ->
+    [ N || N <- ACL, lists:prefix(N, [IP1, IP2, IP3, IP4]) ] == [].
 
--spec check_port(inet:port_number(),[inet:port_number()]) -> boolean().
+-spec check_port(inet:port_number(), [inet:port_number()]) -> boolean().
 check_port(Port, Allowed) ->
     lists:member(Port, Allowed).
