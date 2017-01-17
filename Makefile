@@ -1,6 +1,7 @@
-.PHONY: compile clean release test dialyzer typer
+.PHONY: compile clean release test dialyzer typer lint
 
 REBAR ?= rebar3
+ELVIS ?= elvis
 
 compile:
 	@$(REBAR) compile
@@ -15,8 +16,11 @@ release:
 test:
 	@$(REBAR) do xref, ct
 
-dialyzer: $(DEPSOLVER_PLT)
+dialyzer:
 	@$(REBAR) dialyzer
+
+lint:
+	@$(ELVIS) rock
 
 typer:
 	@typer \
