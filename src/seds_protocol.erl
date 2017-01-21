@@ -36,7 +36,7 @@
 -include("seds.hrl").
 
 -export([decode/1]).
--export([encode/2,data/2,seq/1]).
+-export([encode/2, data/2, seq/1]).
 
 -define(MAXDATA, 110).
 
@@ -68,10 +68,10 @@ decode(#dns_rec{
 
 % mfz.wiztb.onsgmcq.40966-0.id-372571.u.192.168.100.101-2222.x.example.com
 % B64._Nonce-Sum.id-SessionId.u.IP1.IP2.IP3.IP4-Port.x.Domain
--spec decode_type(atom(),[string(),...]) -> #seds{}.
+-spec decode_type(atom(), [string(), ...]) -> #seds{}.
 decode_type(a, [Base64Nonce, Sum, "id", SessionId,
         "u", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
-    IP = makeaddr({IP1,IP2,IP3,IP4}),
+    IP = makeaddr({IP1, IP2, IP3, IP4}),
     Port1 = string_to_port_number(Port),
     B64 = string:tokens(Base64Nonce, "."),
     Forward = forward({IP, Port1}),
@@ -85,7 +85,7 @@ decode_type(a, [Base64Nonce, Sum, "id", SessionId,
     };
 decode_type(a, [Base64Nonce, Sum, "id", SessionId,
         "u", IP1, IP2, IP3, IP4, "x"|Domain]) ->
-    IP = makeaddr({IP1,IP2,IP3,IP4}),
+    IP = makeaddr({IP1, IP2, IP3, IP4}),
     B64 = string:tokens(Base64Nonce, "."),
     Forward = forward({IP, 22}),
     #seds{
@@ -118,7 +118,7 @@ decode_type(a, [Base64Nonce, Sum, "id", SessionId, "up"|Domain]) ->
 % Sum-Nonce.id-SessionId.d.IP1.IP2.IP3.IP4-Port.x.Domain
 decode_type(_Type, [Sum, _Nonce, "id", SessionId,
         "d", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
-    IP = makeaddr({IP1,IP2,IP3,IP4}),
+    IP = makeaddr({IP1, IP2, IP3, IP4}),
     Port1 = string_to_port_number(Port),
     Forward = forward({IP, Port1}),
     #seds{
@@ -130,7 +130,7 @@ decode_type(_Type, [Sum, _Nonce, "id", SessionId,
     };
 decode_type(_Type, [Sum, _Nonce, "id", SessionId,
         "d", IP1, IP2, IP3, IP4, "x"|Domain]) ->
-    IP = makeaddr({IP1,IP2,IP3,IP4}),
+    IP = makeaddr({IP1, IP2, IP3, IP4}),
     Forward = forward({IP, 22}),
     #seds{
         dir = down,
@@ -158,14 +158,15 @@ decode_type(_Type, [Sum, _Nonce, "id", SessionId, "down"|Domain]) ->
 %%--------------------------------------------------------------------
 
 %% Encode the data returned by the server as a DNS record
--spec data(atom(),binary()) ->
-    {iodata(),non_neg_integer(),binary()}.
+-spec data(atom(), binary()) ->
+    {iodata(), non_neg_integer(), binary()}.
 data(_, <<>>) ->
-    {[],0,<<>>};
+    {[], 0, <<>>};
 
 % TXT records
 data(txt, <<D1:?MAXDATA/bytes, D2:?MAXDATA/bytes, Rest/binary>>) ->
-    {[base64:encode_to_string(D1), base64:encode_to_string(D2)], 2*?MAXDATA, Rest};
+    {[base64:encode_to_string(D1), base64:encode_to_string(D2)],
+     2*?MAXDATA, Rest};
 data(txt, <<D1:?MAXDATA/bytes, Rest/binary>>) ->
     {[base64:encode_to_string(D1)], ?MAXDATA, Rest};
 data(txt, Data) ->
@@ -184,13 +185,14 @@ data(cname, Data) ->
     {label(base32:encode(Data)), byte_size(Data), <<>>}.
 
 % The sequence number is encoded as an IPv4 address in the DNS reply.
--spec seq(integer()) -> {byte(),byte(),byte(),byte()}.
+-spec seq(integer()) -> {byte(), byte(), byte(), byte()}.
 seq(N) when is_integer(N) ->
-    <<I1,I2,I3,I4>> = <<N:32>>,
-    {I1,I2,I3,I4}.
+    <<I1, I2, I3, I4>> = <<N:32>>,
+    {I1, I2, I3, I4}.
 
 %% Encode the DNS response to the client
--spec encode(iodata() | {byte(),byte(),byte(),byte()}, #dns_rec{}) -> binary().
+-spec encode(iodata() | {byte(), byte(), byte(), byte()}, #dns_rec{})
+    -> binary().
 encode(Data, #dns_rec{
         header = Header,
         qdlist = [#dns_query{
@@ -228,19 +230,23 @@ string_to_int(N, Max) ->
 %%
 %% decode
 %%
--spec makeaddr({string(),string(),string(),string()}) ->
-    {byte(),byte(),byte(),byte()}.
-makeaddr({IP1,IP2,IP3,IP4}) when is_list(IP1), is_list(IP2), is_list(IP3), is_list(IP4) ->
-    {string_to_byte(IP1), string_to_byte(IP2), string_to_byte(IP3), string_to_byte(IP4)}.
+-spec makeaddr({string(), string(), string(), string()}) ->
+    {byte(), byte(), byte(), byte()}.
+makeaddr({IP1, IP2, IP3, IP4})
+  when is_list(IP1), is_list(IP2), is_list(IP3), is_list(IP4)
+       -> {string_to_byte(IP1),
+           string_to_byte(IP2),
+           string_to_byte(IP3),
+           string_to_byte(IP4)}.
 
 % Remove the trailing dash and convert to an integer
 -spec list_to_sum(string()) -> integer().
 list_to_sum(N) when is_list(N) ->
     list_to_integer(string:strip(N, right, $-)).
 
--spec forward(non_neg_integer() | {inet:ip_address(),inet:port_number()}) ->
-    {'forward' | {'session',byte()},
-        char() | {inet:ip_address(),inet:port_number()}}.
+-spec forward(non_neg_integer() | {inet:ip_address(), inet:port_number()}) ->
+    {'forward' | {'session', byte()},
+        char() | {inet:ip_address(), inet:port_number()}}.
 forward({_IP, _Port} = Forward) ->
     {forward, Forward};
 forward(Id) when is_integer(Id) ->
