@@ -52,13 +52,13 @@
     }).
 
 -define(MAXBUFSZ, 1024 * 1024).  % 1 Mb
--define(otherwise, true).
+-define(OTHERWISE, true).
 
 % Interface
 -export([send/7]).
 -export([start_link/3]).
 % States
--export([connect/2,proxy/2]).
+-export([connect/2, proxy/2]).
 % Behaviours
 -export([init/1, handle_event/3, handle_sync_event/4,
         handle_info/3, terminate/3, code_change/4]).
@@ -66,8 +66,8 @@
 %%--------------------------------------------------------------------
 %%% Interface
 %%--------------------------------------------------------------------
--spec send(pid(),inet:ip_address(),inet:port_number(),#dns_rec{},
-    'down' | 'up',non_neg_integer(),string()) -> 'ok'.
+-spec send(pid(), inet:ip_address(), inet:port_number(), #dns_rec{},
+    'down' | 'up', non_neg_integer(), string()) -> 'ok'.
 send(Pid, IP, Port, #dns_rec{} = Query, up, Sum, Data) when is_pid(Pid) ->
     gen_fsm:send_event(Pid, {up, IP, Port, Query, Sum, Data});
 send(Pid, IP, Port, #dns_rec{} = Query, down, Sum, _) when is_pid(Pid) ->
@@ -76,7 +76,8 @@ send(Pid, IP, Port, #dns_rec{} = Query, down, Sum, _) when is_pid(Pid) ->
 %%--------------------------------------------------------------------
 %%% Behaviours
 %%--------------------------------------------------------------------
--spec start_link(port(),inet:ip_address(),inet:port_number()) -> {'ok',pid()}.
+-spec start_link(port(), inet:ip_address(), inet:port_number())
+    -> {'ok', pid()}.
 start_link(Socket, ServerIP, ServerPort) ->
     {ok, Pid} = gen_fsm:start(?MODULE, [
             Socket,
@@ -106,7 +107,10 @@ handle_sync_event(_Event, _From, StateName, State) ->
 %%
 
 % From server
-handle_info({tcp, Socket, Data}, proxy, #state{s = Socket, data = Buf} = State) ->
+handle_info({tcp, Socket, Data}, proxy, #state{
+                                           s = Socket,
+                                           data = Buf
+                                          } = State) ->
     N = iolist_size(Buf),
     if
         N < ?MAXBUFSZ ->
@@ -115,7 +119,7 @@ handle_info({tcp, Socket, Data}, proxy, #state{s = Socket, data = Buf} = State) 
             lager:debug("buffer_disabled: ~p bytes", [N]),
             ok = inet:setopts(Socket, [{active, false}]),
             {next_state, proxy, State#state{data = [Data|Buf]}, ?PROXY_TIMEOUT};
-        ?otherwise ->
+        ?OTHERWISE ->
             {stop, enobufs, State}
     end;
 
@@ -130,7 +134,8 @@ terminate(Reason, StateName, #state{
         sum_down = Down
     }) ->
     lager:info(
-        "Connection ended: ~s:~p: ~p bytes sent, ~p bytes recvd (state ~p, reason ~p)", [
+        "Connection ended: "
+        "~s:~p: ~p bytes sent, ~p bytes recvd (state ~p, reason ~p)", [
             inet_parse:ntoa(IP),
             Port,
             Up,
@@ -152,7 +157,7 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%
 %% connect
 %%
--spec connect('timeout',#state{}) -> {'next_state','proxy',#state{}}.
+-spec connect('timeout', #state{}) -> {'next_state', 'proxy', #state{}}.
 connect(timeout, #state{ip = IP, port = Port} = State) ->
     {ok, Socket} = gen_tcp:connect(IP, Port, [
             binary,
@@ -167,13 +172,13 @@ connect(timeout, #state{ip = IP, port = Port} = State) ->
 
 % client sent data to be forwarded to server
 -spec proxy('timeout' |
-    {'down',inet:ip_address(),inet:port_number(),#dns_rec{},
-        non_neg_integer(),string()} |
-    {'up',inet:ip_address(),inet:port_number(),#dns_rec{},
-        non_neg_integer(),string()},#state{}) ->
-    {'stop','timeout' | {'down','out_of_sync'} |
-        {'up','out_of_sync'},_} |
-    {'next_state','proxy',#state{},non_neg_integer()}.
+    {'down', inet:ip_address(), inet:port_number(), #dns_rec{},
+        non_neg_integer(), string()} |
+    {'up', inet:ip_address(), inet:port_number(), #dns_rec{},
+        non_neg_integer(), string()}, #state{}) ->
+    {'stop', 'timeout' | {'down', 'out_of_sync'} |
+        {'up', 'out_of_sync'}, _} |
+    {'next_state', 'proxy', #state{}, non_neg_integer()}.
 proxy({up, IP, Port, Rec, ClientSum, Data}, #state{
         sum_up = ClientSum,
         dnsfd = DNSSocket,
