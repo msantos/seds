@@ -1,4 +1,4 @@
-%% Copyright (c) 2015, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2015-2017, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %%
 %% Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,17 @@
         start/0,
         stop/0
     ]).
+
+-include_lib("kernel/src/inet_dns.hrl").
+-include("seds.hrl").
+
+-type seds() :: #seds{}.
+-type dns_rec() :: #dns_rec{}.
+
+-export_type([
+              seds/0,
+              dns_rec/0
+             ]).
 
 -compile([{parse_transform, lager_transform}]).
 

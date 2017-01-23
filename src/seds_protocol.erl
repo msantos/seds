@@ -1,4 +1,4 @@
-%% Copyright (c) 2010-2015, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2010-2017, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %%
 %% Redistribution and use in source and binary forms, with or without
@@ -48,7 +48,7 @@
 %%% Handle decoding of the data embedded in the different
 %%% record types.
 %%%
--spec decode(binary() | #dns_rec{}) -> #seds{}.
+-spec decode(binary() | seds:dns_rec()) -> seds:seds().
 decode(Query) when is_binary(Query) ->
     {ok, Rec} = inet_dns:decode(Query),
     decode(Rec);
@@ -68,7 +68,7 @@ decode(#dns_rec{
 
 % mfz.wiztb.onsgmcq.40966-0.id-372571.u.192.168.100.101-2222.x.example.com
 % B64._Nonce-Sum.id-SessionId.u.IP1.IP2.IP3.IP4-Port.x.Domain
--spec decode_type(atom(), [string(), ...]) -> #seds{}.
+-spec decode_type(atom(), [string(), ...]) -> seds:seds().
 decode_type(a, [Base64Nonce, Sum, "id", SessionId,
         "u", IP1, IP2, IP3, IP4, Port, "x"|Domain]) ->
     IP = makeaddr({IP1, IP2, IP3, IP4}),
@@ -191,7 +191,7 @@ seq(N) when is_integer(N) ->
     {I1, I2, I3, I4}.
 
 %% Encode the DNS response to the client
--spec encode(iodata() | {byte(), byte(), byte(), byte()}, #dns_rec{})
+-spec encode(iodata() | {byte(), byte(), byte(), byte()}, seds:dns_rec())
     -> binary().
 encode(Data, #dns_rec{
         header = Header,
