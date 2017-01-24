@@ -1,4 +1,4 @@
-%% Copyright (c) 2010-2016, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2010-2017, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %%
 %% Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,8 @@
                                                 % returned by proxied server
     }).
 
+-type state() :: #state{}.
+
 -define(MAXBUFSZ, 1024 * 1024).  % 1 Mb
 -define(OTHERWISE, true).
 
@@ -66,7 +68,7 @@
 %%--------------------------------------------------------------------
 %%% Interface
 %%--------------------------------------------------------------------
--spec send(pid(), inet:ip_address(), inet:port_number(), #dns_rec{},
+-spec send(pid(), inet:ip_address(), inet:port_number(), seds:dns_rec(),
     'down' | 'up', non_neg_integer(), string()) -> 'ok'.
 send(Pid, IP, Port, #dns_rec{} = Query, up, Sum, Data) when is_pid(Pid) ->
     gen_fsm:send_event(Pid, {up, IP, Port, Query, Sum, Data});
@@ -157,7 +159,7 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%
 %% connect
 %%
--spec connect('timeout', #state{}) -> {'next_state', 'proxy', #state{}}.
+-spec connect('timeout', state()) -> {'next_state', 'proxy', state()}.
 connect(timeout, #state{ip = IP, port = Port} = State) ->
     {ok, Socket} = gen_tcp:connect(IP, Port, [
             binary,
@@ -172,13 +174,13 @@ connect(timeout, #state{ip = IP, port = Port} = State) ->
 
 % client sent data to be forwarded to server
 -spec proxy('timeout' |
-    {'down', inet:ip_address(), inet:port_number(), #dns_rec{},
+    {'down', inet:ip_address(), inet:port_number(), seds:dns_rec(),
         non_neg_integer(), string()} |
-    {'up', inet:ip_address(), inet:port_number(), #dns_rec{},
-        non_neg_integer(), string()}, #state{}) ->
+    {'up', inet:ip_address(), inet:port_number(), seds:dns_rec(),
+        non_neg_integer(), string()}, state()) ->
     {'stop', 'timeout' | {'down', 'out_of_sync'} |
         {'up', 'out_of_sync'}, _} |
-    {'next_state', 'proxy', #state{}, non_neg_integer()}.
+    {'next_state', 'proxy', state(), non_neg_integer()}.
 proxy({up, IP, Port, Rec, ClientSum, Data}, #state{
         sum_up = ClientSum,
         dnsfd = DNSSocket,
