@@ -1,4 +1,4 @@
-%% Copyright (c) 2010-2016, Michael Santos <michael.santos@gmail.com>
+%% Copyright (c) 2010-2017, Michael Santos <michael.santos@gmail.com>
 %% All rights reserved.
 %%
 %% Redistribution and use in source and binary forms, with or without
@@ -55,8 +55,10 @@
         p = dict:new() :: dict:dict()       % list of proxies
     }).
 
+-type state() :: #state{}.
 
--spec send(inet:ip_address(), inet:port_number(), #dns_rec{}, #seds{}) -> ok.
+-spec send(inet:ip_address(), inet:port_number(), seds:dns_rec(), seds:seds())
+    -> ok.
 send(IP, Port, #dns_rec{} = Rec, #seds{} = Query) ->
     gen_server:call(?SERVER, {send, IP, Port, Rec, Query}).
 
@@ -66,7 +68,7 @@ start_link() ->
     Port = application:get_env(seds, port, 53),
     gen_server:start_link({local, ?SERVER}, ?MODULE, [IP, Port], []).
 
--spec init([inet:ip_address() | inet:port_number()]) -> {'ok', #state{}}.
+-spec init([inet:ip_address() | inet:port_number()]) -> {'ok', state()}.
 init([IP, Port]) when Port > 1024 ->
     init(IP, Port, []);
 init([IP, Port]) ->
@@ -80,7 +82,7 @@ init([IP, Port]) ->
     init(any, 0, [{fd, FD}]).
 
 -spec init(any | inet:ip_address(), inet:port_number(), proplists:proplist()) ->
-    {'ok', #state{}}.
+    {'ok', state()}.
 init(IP, Port, Opt) ->
     process_flag(trap_exit, true),
 
@@ -180,7 +182,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 
 % Static list of forwarded hosts:port, identified from offset 0
--spec session(#seds{}, #state{}) ->
+-spec session(seds:seds(), state()) ->
     {{inet:ip_address(), inet:port_number()}, non_neg_integer()}.
 session(#seds{
         forward = {session, Forward},
@@ -205,7 +207,7 @@ session(#seds{
 % parsing succeeds, the data is returned to the gen_server. If
 % the process crashes, the query is dropped.
 %
--spec decode(inet:ip_address(), inet:port_number(), binary(), #state{}) -> 'ok'.
+-spec decode(inet:ip_address(), inet:port_number(), binary(), state()) -> 'ok'.
 decode(IP, Port, Data, State) ->
     {ok, Query} = inet_dns:decode(Data),
     Decoded = seds_protocol:decode(Query),
@@ -213,7 +215,7 @@ decode(IP, Port, Data, State) ->
     seds_srv:send(IP, Port, Query, Decoded).
 
 -spec proxy({{inet:ip_address(), inet:port_number()}, non_neg_integer()},
-    #state{}) -> {'ok', pid()}.
+    state()) -> {'ok', pid()}.
 proxy({{IP, Port}, Id}, #state{
         s = Socket
     }) ->
@@ -224,7 +226,7 @@ proxy({{IP, Port}, Id}, #state{
     ]),
     seds_proxy:start_link(Socket, IP, Port).
 
--spec allow(#seds{}, #state{}) -> boolean().
+-spec allow(seds:seds(), state()) -> boolean().
 allow(#seds{
         forward = {forward, {IP, Port}},
         domain = Domain
