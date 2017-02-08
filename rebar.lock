@@ -8,5 +8,5 @@
   0},
  {<<"procket">>,
   {git,"https://github.com/msantos/procket.git",
-       {ref,"36a8bd3ceb183076a6e3a2041decdea6ad1a3f23"}},
+       {ref,"465d5e25a9a8da301e4701b890cfba284877a953"}},
   0}].

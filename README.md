@@ -11,14 +11,34 @@ A client (and a small, standalone server written in C) is available here:
 Quick Start
 -----------
 
-    # setup configuration
+    ## setup configuration
     cp rel/sys.config.dist rel/sys.config
     vi rel/sys.config
 
-    $ rebar3 do compile, release
+    ## build and run for development
+    $ rebar3 do compile, ct, release
 
     # run the server
     $ ./_build/default/rel/seds/bin/seds foreground
+
+Installing a Release
+--------------------
+
+    ## build a production release
+    $ rebar3 as prod tar
+
+    # install as root to /usr/local/lib/seds
+
+    $ mkdir -p /usr/local/lib/seds
+    $ cd /usr/local/lib/seds
+    $ tar zxvf /path/to/seds-0.3.0.tar.gz
+
+    # restrict procket executable
+    # chown root:<group> lib/procket-*/priv/procket
+    $ chmod u+s lib/procket-*/priv/procket
+
+    # run the server
+    $ /usr/local/lib/seds/bin/seds start
 
 Using Low Ports
 ---------------
