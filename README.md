@@ -12,8 +12,8 @@ Quick Start
 -----------
 
     ## setup configuration
-    cp rel/sys.config.dist rel/sys.config
-    vi rel/sys.config
+    cp config/sys.config.dist config/sys.config
+    vi config/sys.config
 
     ## build and run for development
     $ rebar3 do compile, ct, release

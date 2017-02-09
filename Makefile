@@ -7,7 +7,6 @@ compile:
 	@$(REBAR) compile
 
 clean:
-	-@$(RM) -rf _rel
 	@$(REBAR) clean
 
 release:
