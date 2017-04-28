@@ -68,6 +68,19 @@ The seds configuration uses Erlang terms. Options are:
             Port bound by service. Using a port below 1024 requires
             setting up the procket setuid helper.
 
+    exec:
+        type: list(string())
+        default: ["", "sudo"]
+        description:
+            When using a low port, specifies a list of one or more
+            methods the helper executable will attempt to open the
+            port. The defaults is try to listen on the port and,
+            if not successful, to run the helper using "sudo".
+
+            On OpenBSD, use:
+
+            {exec, ["", "doas"]}
+
     forward:
         type: [{inet:ip_address(), inet:port_number()}]
         default: []

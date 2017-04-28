@@ -66,13 +66,14 @@ send(IP, Port, #dns_rec{} = Rec, #seds{} = Query) ->
 start_link() ->
     IP = application:get_env(seds, ip, any),
     Port = application:get_env(seds, port, 53),
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [IP, Port], []).
+    Exec = application:get_env(seds, exec, ["", "sudo"]),
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [IP, Port, Exec], []).
 
 -spec init([inet:ip_address() | inet:port_number()]) -> {'ok', state()}.
-init([IP, Port]) when Port > 1024 ->
+init([IP, Port, Exec]) when Port > 1024 ->
     init(IP, Port, []);
-init([IP, Port]) ->
-    Options = [{protocol, udp}, {family, inet}, {type, dgram}] ++ case IP of
+init([IP, Port, Exec]) ->
+    Options = [{protocol, udp}, {family, inet}, {type, dgram}, {exec, Exec}] ++ case IP of
         any -> [];
         IP -> [{ip, IP}]
     end,

@@ -2,7 +2,7 @@
     {description, "Socket over DNS service"},
     {vsn, "0.3.0"},
     {registered, [seds_srv,seds_sup]},
-    {applications, [kernel, stdlib, sasl, lager]},
+    {applications, [kernel, stdlib, sasl, lager, procket]},
     {mod, { seds_app, []}},
     {env, []}
     ]}.
